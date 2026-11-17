@@ -1,0 +1,22 @@
+{
+  "name": "varin-promo-80s-remotion",
+  "version": "1.0.0",
+  "description": "Varin B站 88秒完整版宣传片 Remotion 工程（含分离式音乐轨与音效轨）",
+  "private": true,
+  "scripts": {
+    "start": "remotion studio",
+    "dev": "remotion studio",
+    "build": "remotion render VarinPromo80s out/varin-promo-full-80s.mp4 --codec=h264 --crf=18"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.242",
+    "@remotion/media-utils": "^4.0.242",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.242"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "typescript": "^5.6.3"
+  }
+}

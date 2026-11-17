@@ -1,0 +1,21 @@
+# 本地环境变量和凭据
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.p12
+*.pfx
+*.kdbx
+id_rsa
+id_ed25519
+credentials.json
+service-account*.json
+
+# 本地依赖和缓存
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.pyc
