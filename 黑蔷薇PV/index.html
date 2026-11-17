@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>黒薔薇の祈り — PV 根合成</title>
+<script src="assets/vendor/gsap.min.js"></script>
+<!-- 细层：真实音频事件数据包 + 纯函数读取工具（python analysis/onsets.py 生成） -->
+<script src="assets/vendor/audio-events.js"></script>
+<script src="assets/vendor/audio-rig.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000; overflow: hidden; }
+  .clip { position: absolute; }
+
+  #root {
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    background: #000;
+    position: relative;
+  }
+
+  /* ===== 全局光学调色层（统一所有素材的"胶片气质"，随歌曲段落动态变化）===== */
+
+  /* ① 光学滤镜直接挂在合成宿主 #root 上（GPU 合成：亮度/饱和/对比），
+        分镜与染色层都在其下，色彩运算在混合之后，等价于真实调色管线末级 */
+  #root {
+    filter:
+      brightness(var(--g-b, 1))
+      saturate(var(--g-s, 1))
+      contrast(var(--g-c, 1))
+      sepia(var(--g-sep, 0));
+    transform-origin: 50% 46%;
+    will-change: filter, transform;
+  }
+
+  /* ② 色彩染色层：冷蓝 / 猩红 / 圣金三层 soft-light，按段落淡入淡出 */
+  .grade-tint {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    mix-blend-mode: soft-light;
+    opacity: 0;
+    will-change: opacity;
+  }
+  #tint-cold { background: #101e33; }  /* 主歌冷蓝 */
+  #tint-hot  { background: #5e0a14; }  /* 副歌猩红入侵 */
+  #tint-gold { background: #866326; }  /* Bridge 圣光暖金 */
+
+  /* ③ 暗角：统一所有素材的边缘密度 */
+  #grade-vignette {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    will-change: transform;
+    background: radial-gradient(ellipse 72% 66% at 50% 46%,
+                rgba(0,0,0,0) 52%, rgba(0,0,0,.42) 82%, rgba(0,0,0,.78) 100%);
+  }
+
+  /* ④ 胶片颗粒：小尺寸噪点放大铺满（非逐像素处理 1080p），overlay 低透明 */
+  #grade-grain {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    mix-blend-mode: overlay;
+    opacity: .055;
+    image-rendering: auto;
+  }
+</style>
+</head>
+<body>
+  <div id="root"
+       data-composition-id="kurobara-pv"
+       data-width="1920"
+       data-height="1080"
+       data-fps="30">
+
+    <!-- 主音轨：beats 命令靠 data-timeline-role="music" 识别 -->
+    <!-- TODO: 随分镜制作进度延长 duration，全曲完成时改为 242.1 -->
+    <audio id="music"
+           data-timeline-role="music"
+           data-start="0"
+           data-duration="107.28"
+           src="assets/audio/黒薔薇の祈り.mp3"></audio>
+
+    <!-- Intro 分镜 0:00-0:38（所有分镜直属宿主，统一受 #root 光学滤镜管辖） -->
+    <div id="shot-intro" class="clip"
+         data-composition-id="intro"
+         data-composition-src="compositions/intro.html"
+         data-start="0" data-duration="38"
+         data-track-index="0"></div>
+
+    <!-- Verse 1 持久世界层：镜头在同一个教堂空间里切换（track 0 永远最底） -->
+    <div id="track-v1-env" class="clip"
+         data-composition-id="v1-env"
+         data-composition-src="compositions/v1-env.html"
+         data-start="38" data-duration="15.93"
+         data-track-index="0"></div>
+
+    <!-- Verse 1 分镜 0:38-0:53.93：切点严格吸附歌词行时间戳 -->
+    <div id="shot-v1s1" class="clip"
+         data-composition-id="v1-shot1"
+         data-composition-src="compositions/v1-shot1.html"
+         data-start="38" data-duration="4.36"
+         data-track-index="1"></div>
+    <div id="shot-v1s2" class="clip"
+         data-composition-id="v1-shot2"
+         data-composition-src="compositions/v1-shot2.html"
+         data-start="42.36" data-duration="3.75"
+         data-track-index="1"></div>
+    <div id="shot-v1s3" class="clip"
+         data-composition-id="v1-shot3"
+         data-composition-src="compositions/v1-shot3.html"
+         data-start="46.11" data-duration="5.11"
+         data-track-index="1"></div>
+    <div id="shot-v1s4" class="clip"
+         data-composition-id="v1-shot4"
+         data-composition-src="compositions/v1-shot4.html"
+         data-start="51.22" data-duration="2.71"
+         data-track-index="1"></div>
+
+    <!-- 持久大气层：浮尘/冷雾/风（盖在镜头之上） -->
+    <div id="track-v1-atmos" class="clip"
+         data-composition-id="v1-atmos"
+         data-composition-src="compositions/v1-atmos.html"
+         data-start="38" data-duration="15.93"
+         data-track-index="2"></div>
+
+    <!-- 切点过渡特效层：涟漪/柱影遮挡/黑羽过切 -->
+    <div id="track-v1-fx" class="clip"
+         data-composition-id="v1-fx"
+         data-composition-src="compositions/v1-fx.html"
+         data-start="38" data-duration="15.93"
+         data-track-index="7"></div>
+
+    <!-- ============ Pre1：無鐘之塔 → 沉沦（53.93-68.37）============ -->
+    <div id="track-pre1-env" class="clip"
+         data-composition-id="pre1-env"
+         data-composition-src="compositions/pre1-env.html"
+         data-start="53.93" data-duration="14.44"
+         data-track-index="0"></div>
+    <div id="shot-pre1s1" class="clip"
+         data-composition-id="pre1-shot1"
+         data-composition-src="compositions/pre1-shot1.html"
+         data-start="53.93" data-duration="9.58"
+         data-track-index="1"></div>
+    <div id="shot-pre1s2" class="clip"
+         data-composition-id="pre1-shot2"
+         data-composition-src="compositions/pre1-shot2.html"
+         data-start="63.51" data-duration="4.86"
+         data-track-index="1"></div>
+
+    <!-- ============ Chorus1：下沉绽放 → 锁链 → 絶唱 → 滅びの庭（68.37-107.28）============ -->
+    <div id="track-c1-env" class="clip"
+         data-composition-id="c1-env"
+         data-composition-src="compositions/c1-env.html"
+         data-start="68.37" data-duration="38.91"
+         data-track-index="0"></div>
+    <div id="shot-c1s1" class="clip"
+         data-composition-id="c1-shot1"
+         data-composition-src="compositions/c1-shot1.html"
+         data-start="68.37" data-duration="4.31"
+         data-track-index="1"></div>
+    <div id="shot-c1s2" class="clip"
+         data-composition-id="c1-shot2"
+         data-composition-src="compositions/c1-shot2.html"
+         data-start="72.68" data-duration="8.78"
+         data-track-index="1"></div>
+    <div id="shot-c1s3" class="clip"
+         data-composition-id="c1-shot3"
+         data-composition-src="compositions/c1-shot3.html"
+         data-start="81.46" data-duration="4.31"
+         data-track-index="1"></div>
+    <div id="shot-c1s4" class="clip"
+         data-composition-id="c1-shot4"
+         data-composition-src="compositions/c1-shot4.html"
+         data-start="85.77" data-duration="21.51"
+         data-track-index="1"></div>
+
+    <!-- Pre1+Chorus1 持久大气层：细雪 → 下沉微粒 → 庭中余烬 -->
+    <div id="track-pc-atmos" class="clip"
+         data-composition-id="pc-atmos"
+         data-composition-src="compositions/pc-atmos.html"
+         data-start="53.93" data-duration="53.35"
+         data-track-index="2"></div>
+
+    <!-- Pre1+Chorus1 特效层：雪幕切点 / 副歌爆闪 / 金屑崩断 / 落底环 -->
+    <div id="track-pc-fx" class="clip"
+         data-composition-id="pc-fx"
+         data-composition-src="compositions/pc-fx.html"
+         data-start="53.93" data-duration="53.35"
+         data-track-index="7"></div>
+
+    <!-- 全曲歌词字幕轨（内部时间=全局时间，故从 0 挂，随进度延长）。
+         必须置于所有镜头/特效合成之后：合成 clip 实际按 DOM 顺序层叠，
+         放在镜头之前会被后挂载的 Pre/C 段镜头整个盖死。 -->
+    <div id="track-lyrics" class="clip"
+         data-composition-id="lyrics"
+         data-composition-src="compositions/lyrics.html"
+         data-start="0" data-duration="107.28"
+         data-track-index="5"></div>
+
+    <!-- ②③④ 全局光学层（根 DOM 原生元素，靠 DOM 顺序永远盖在分镜之上；
+             data-layout-ignore：装饰性光学层，不参与遮挡/溢出审计） -->
+    <div id="tint-cold" class="grade-tint" data-layout-ignore></div>
+    <div id="tint-hot"  class="grade-tint" data-layout-ignore></div>
+    <div id="tint-gold" class="grade-tint" data-layout-ignore></div>
+    <div id="grade-vignette" data-layout-ignore data-layout-allow-occlusion></div>
+    <canvas id="grade-grain" width="320" height="180" data-layout-ignore></canvas>
+  </div>
+
+  <script>
+    /* =========================================================
+     * 全局调色时间轴：一份"色彩剧本"，全片唯一真相源
+     * 时间点来自歌词/段落分析（权威主轴），不靠猜拍。
+     * b/s/c/sep 挂 stage 滤镜；cold/hot/gold 为三层染色透明度。
+     * 色彩叙事弧线：
+     *   Intro     冷黑压抑 → Verse 清冷叙事 → Pre 冻结
+     *   Chorus    猩红入侵、对比拉满 → Verse2 冷中带不安
+     *   Pre2      赤月红光 → Chorus2 更烈 → Solo 高对比灼烧
+     *   Bridge    红光洗去、圣金+冷白 → Final 红金最高潮
+     *   终止和弦  硬切近黑，残响里只剩一粒暖烬
+     * ========================================================= */
+    var GRADE_KEYS = [
+      // t(秒),  b,    s,    c,    sep,  cold, hot,  gold
+      [   0.0,  .90,  .80, 1.09, .04,  .55,  .00, .00],  // Intro 冷黑
+      [  20.0,  .92,  .85, 1.08, .04,  .50,  .10, .00],  // 鼓进入：暗红从底部渗入
+      [  37.6,  .95,  .90, 1.06, .03,  .42,  .16, .00],  // 白闪前微微升温
+      // TODO: 分镜做到对应段落时，解除下面这些关键帧并把 GRADE_END 延长到 242.1
+      [  38.0,  .99,  .90, 1.04, .02,  .34, .00, .00],  // Verse1 清冷
+      [  53.6, 1.02,  .82, 1.06, .00,  .46, .00, .00],  // Pre1 冻结的苍白
+      [  67.6, 1.01,  .80, 1.07, .00,  .48, .00, .00],  // 沉沦段仍守住苍白冷光
+      [  68.6,  .96, 1.18, 1.14, .05,  .12, .52, .00],  // 副歌瞬间猩红爆发
+      [  85.6,  .90, 1.26, 1.19, .06,  .06, .60, .00],  // 落底毁灭之庭：更暗更红
+      [  97.0,  .93, 1.14, 1.15, .05,  .10, .46, .00],  // 长间奏：猩红稍沉
+      [ 106.9,  .58,  .62, 1.22, .00,  .00, .14, .00],  // 收束：压成近黑余烬
+      // [ 107.7,  .97,  .88, 1.06, .06,  .30, .10, .00],  // TODO Verse2 冷中带不安
+      // [ 124.8,  .94, 1.02, 1.10, .07,  .10, .40, .00],  // Pre2 赤月
+      // [ 141.2,  .95, 1.22, 1.16, .06,  .06, .60, .00],  // Chorus2 更烈
+      // [ 154.7,  .98, 1.28, 1.20, .04,  .00, .44, .06],  // Solo 灼烧感
+      // [ 175.6, 1.06,  .72, 1.02, .00,  .18, .00, .34],  // Bridge 圣光洗去红
+      // [ 199.0,  .96, 1.26, 1.18, .05,  .00, .58, .24],  // Final 红金最高潮
+      // [ 238.2,  .60,  .50, 1.25, .00,  .00, .18, .00],  // 终止和弦硬切近黑
+      // [ 242.1,  .55,  .40, 1.20, .00,  .00, .10, .00]   // 残响：暗红余烬
+    ];
+
+    // TODO: 全片完成改为 242.1（与音轨 data-duration 同步）
+    var GRADE_END = 107.28;
+
+    window.__timelines = window.__timelines || {};
+    var tl = gsap.timeline({ paused: true });
+    window.__timelines["kurobara-pv"] = tl;
+
+    var rootEl = document.getElementById("root");
+    var tints = {
+      cold: document.getElementById("tint-cold"),
+      hot:  document.getElementById("tint-hot"),
+      gold: document.getElementById("tint-gold")
+    };
+
+    // 代理状态：逐帧拼成 filter 字符串（比直接 tween filter 函数更可控）
+    var g = { b: 1, s: 1, c: 1, sep: 0, cold: 0, hot: 0, gold: 0 };
+    function applyGrade() {
+      rootEl.style.setProperty("--g-b", g.b);
+      rootEl.style.setProperty("--g-s", g.s);
+      rootEl.style.setProperty("--g-c", g.c);
+      rootEl.style.setProperty("--g-sep", g.sep);
+      tints.cold.style.opacity = g.cold;
+      tints.hot.style.opacity  = g.hot;
+      tints.gold.style.opacity  = g.gold;
+    }
+
+    // 起始状态即第一个关键帧的值
+    g.b = GRADE_KEYS[0][1]; g.s = GRADE_KEYS[0][2]; g.c = GRADE_KEYS[0][3];
+    g.sep = GRADE_KEYS[0][4];
+    g.cold = GRADE_KEYS[0][5]; g.hot = GRADE_KEYS[0][6]; g.gold = GRADE_KEYS[0][7];
+
+    // 之后每个关键帧：从上一帧时刻出发，在抵达本帧时刻时过渡到本帧值
+    for (var ki = 1; ki < GRADE_KEYS.length; ki++) {
+      var prev = GRADE_KEYS[ki - 1], cur = GRADE_KEYS[ki];
+      tl.to(g, {
+        b: cur[1], s: cur[2], c: cur[3], sep: cur[4],
+        cold: cur[5], hot: cur[6], gold: cur[7],
+        duration: Math.max(0.01, cur[0] - prev[0]),
+        ease: "power1.inOut",
+        onUpdate: applyGrade
+      }, prev[0]);
+    }
+    applyGrade();
+
+    /* ===== 胶片颗粒：确定性随机，按帧号播种（seek 任意帧结果一致）===== */
+    var grain = document.getElementById("grade-grain");
+    var gctx = grain.getContext("2d");
+    var GW = grain.width, GH = grain.height;
+    var tile = document.createElement("canvas");
+    tile.width = GW; tile.height = GH;
+    var tctx = tile.getContext("2d");
+    var img = tctx.createImageData(GW, GH);
+
+    function mulberry32(seed) {
+      return function () {
+        seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+        var t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    function drawGrain(t) {
+      var frame = Math.floor(t * 30);
+      var rnd = mulberry32(frame * 2654435761 + 97);
+      var d = img.data;
+      for (var i = 0; i < d.length; i += 4) {
+        var v = 70 + (rnd() * 165) | 0;
+        d[i] = d[i + 1] = d[i + 2] = v;
+        d[i + 3] = 255;
+      }
+      tctx.putImageData(img, 0, 0);
+      gctx.imageSmoothingEnabled = true;
+      gctx.drawImage(tile, 0, 0, 1920, 1080);
+    }
+
+    /* ===== 细层·有机反应层：画面「呼吸在音乐里」（时间的纯函数，seek 安全）=====
+     * 数据来自 AudioRig（onsets.py 的真实音频分析，不是 LLM 猜点）：
+     *  ① 低/中频起音（排除纯高频镲片）→ 方向锁定的整幕微震，一击弹回；
+     *     量程被段落能量门控（g.hot 副歌允许 ~5px，主歌仅 ~1px，安静段近乎静止）
+     *  ② 人声带包络（高斯时间核平滑，杜绝帧抖）→ ±0.1% 的极慢推近，
+     *     像镜头在跟着歌唱呼吸，而不是屏保漂浮
+     *  ③ 低频连击 → 暗角轻收（低频压胸感）；高频击打 → 胶片颗粒略粗
+     * 注意：所有平滑都用时间核在函数内现算，不保留跨帧状态（逐帧 seek 可复现）。 */
+    var vigEl = document.getElementById("grade-vignette");
+
+    function smoothEnv(name, t) {
+      var fps = window.AUDIO_EVENTS ? AUDIO_EVENTS.fps : 50;
+      var dt = 1 / fps, r = 0, w = 0;
+      for (var k = -6; k <= 6; k++) {
+        var e = Math.exp(-(k * k) / 12.5);   // σ=2.5 格 ≈ 50ms 高斯核
+        r += e * AudioRig.env(name, t + k * dt);
+        w += e;
+      }
+      return r / w;
+    }
+
+    function drawReaction(t) {
+      if (!window.AudioRig) return;
+      // ① 整幕微震：全频带强起音（副歌重击多在 b=2，排除会整条鼓组哑掉），
+      //    方向随「那一次起音」锁定
+      var sh = AudioRig.shake(t, { minS: .6, half: .10, win: .45, seed: 11 });
+      var ampPx = sh.amp * (1.1 + g.hot * 6.2);   // 主歌 ~1px / 副歌 ~5px
+      // ② 人声呼吸：平滑后的人声带能量，在 0.45 基线以上才推近，封顶 .12%
+      var breath = Math.max(0, smoothEnv("voice", t) - .45);
+      var sc = 1 + Math.min(breath, 1) * .0012;
+      rootEl.style.transform =
+        "translate3d(" + (sh.x * ampPx).toFixed(2) + "px," + (sh.y * ampPx).toFixed(2) + "px,0) scale(" + sc.toFixed(5) + ")";
+      // ③ 低频连击压胸：暗角向内一收（主歌只给 35% 的量）
+      var vk = AudioRig.hits(t, { band: 0, minS: .55, half: .14, win: .5 });
+      vigEl.style.transform = "scale(" + (1 + vk * (.010 + g.hot * .020)).toFixed(4) + ")";
+      // ④ 高频击打：颗粒从 5.5% 上浮到约 8%，砂砾感跟镲片/拨弦走
+      var grit = .05 + AudioRig.env("high", t) * .016 + AudioRig.envPulse("high", t) * .02;
+      grain.style.opacity = Math.min(.09, grit).toFixed(3);
+    }
+
+    // 单一驱动：一条贯穿全段的 tween，渲染器 seek 到哪帧就画哪帧的颗粒+反应层
+    var grainState = { t: 0 };
+    tl.to(grainState, {
+      t: GRADE_END,
+      ease: "none",
+      duration: GRADE_END,
+      onUpdate: function () { drawGrain(grainState.t); drawReaction(grainState.t); }
+    }, 0);
+    drawGrain(0);
+    drawReaction(0);
+  </script>
+</body>
+</html>

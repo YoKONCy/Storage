@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Chorus1 Shot4 — 滅びの庭で 私は歌う + 长间奏（85.77-107.28）</title>
+<script src="assets/vendor/gsap.min.js"></script>
+<script src="assets/vendor/audio-events.js"></script>
+<script src="assets/vendor/audio-rig.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: transparent; overflow: hidden; }
+  .clip { position: absolute; }
+  #root { width: 1920px; height: 1080px; overflow: hidden; }
+
+  .actor { position: absolute; will-change: opacity, transform; }
+  .actor img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: contain;
+  }
+  .sil { filter: brightness(.12) saturate(.25) contrast(1.5); }
+  .rim { mix-blend-mode: screen; }
+
+  /* 梦境立绘：不压黑的本体影调，永远极模糊（视野失焦中的若隐若现） */
+  .dream {
+    opacity: 0;
+    filter: blur(6px) brightness(.42) saturate(.6) contrast(1.08);
+  }
+
+  /* 观察者视野总包裹：微颤/漂移一体（眼睑与世界同颤 = 眼球视角在颤） */
+  #view { inset: 0; will-change: transform; }
+
+  /* 眼睑层：上下黑块睑裂开合 + 失焦柔雾，永远在画面最上 */
+  #eyes { position: absolute; inset: 0; pointer-events: none; will-change: transform; }
+  .lid {
+    position: absolute; left: 0; width: 100%; height: 58%;
+    pointer-events: none; will-change: transform;
+  }
+  /* 实黑段 72% + 窄羽化：旧版 62% 起的宽羽化叠在暗红庭上睑缘完全融没，
+     开合节奏读不出来；收窄后睑缘可辨又不硬 */
+  #lid-top {
+    top: -8%;
+    background: linear-gradient(to bottom,
+      #000 0%, #000 72%, rgba(0,0,0,.85) 84%, rgba(0,0,0,.30) 94%, rgba(0,0,0,0) 100%);
+  }
+  #lid-bottom {
+    bottom: -8%;
+    background: linear-gradient(to top,
+      #000 0%, #000 72%, rgba(0,0,0,.85) 84%, rgba(0,0,0,.30) 94%, rgba(0,0,0,0) 100%);
+  }
+  /* 隔着眼皮感知的光：睑裂越小视野越沉入暗红（与 85.77 闭眼中见红闪呼应）。
+     睁眼时退净；结尾合眼段（105.5 后）也退净，让余烬从 9% 一线缝里直接可见 */
+  #lid-glow {
+    position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(130% 100% at 50% 50%,
+      rgba(46,3,8,.55) 0%, rgba(24,1,4,.82) 55%, rgba(10,0,2,.94) 100%);
+    opacity: 0;
+    will-change: opacity;
+  }
+  /* 失焦柔雾：中心略透、边缘压暗，模拟睁不开的朦胧视野（无法跨合成模糊环境层） */
+  #defocus {
+    position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(120% 92% at 50% 42%,
+      rgba(0,0,0,0) 36%, rgba(0,0,0,.10) 66%, rgba(0,0,0,.30) 100%);
+    opacity: 0;
+  }
+
+  /* 人物与倒影同在一个世界 wrapper（缓推/横移/淡出一体） */
+  #world {
+    inset: 0;
+    transform-origin: 50% 82%;   /* 缓推时赤足钉在水洼地面 */
+    will-change: transform, opacity;
+  }
+
+  /* A1 静立庭中（图比 .664），赤足落 1023 */
+  #girl {
+    width: 560px; height: 843px;
+    left: 690px; top: 180px;
+    opacity: 0;
+  }
+
+  /* 水洼倒影：脚下翻折镜像，纵向 mask 消融，再压暗 */
+  #mirror {
+    position: absolute;
+    width: 560px; height: 430px;
+    left: 690px; top: 1000px;
+    overflow: hidden;
+    opacity: 0;
+    -webkit-mask-image: linear-gradient(to bottom,
+      rgba(0,0,0,.55) 0%, rgba(0,0,0,.22) 42%, rgba(0,0,0,0) 100%);
+    mask-image: linear-gradient(to bottom,
+      rgba(0,0,0,.55) 0%, rgba(0,0,0,.22) 42%, rgba(0,0,0,0) 100%);
+  }
+  #mirror img {
+    position: absolute;
+    left: 0; bottom: 0;
+    width: 560px; height: 843px;
+    object-fit: contain;
+    transform: scaleY(-1);
+    filter: brightness(.07) saturate(.4) contrast(1.3);
+  }
+
+  /* 她足下一圈微弱的水面冷红反光 */
+  #water-shine {
+    position: absolute;
+    width: 720px; height: 150px;
+    left: 610px; top: 980px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse,
+      rgba(150,40,44,.2) 0%, rgba(0,0,0,0) 70%);
+    mix-blend-mode: screen;
+    opacity: 0;
+  }
+</style>
+</head>
+<body>
+  <div id="root" data-composition-id="c1-shot4" data-width="1920" data-height="1080">
+   <div id="view" class="clip"
+         data-start="0" data-duration="21.51" data-track-index="0"
+         data-layout-ignore>
+    <div id="world" class="clip"
+         data-start="0" data-duration="21.51" data-track-index="1"
+         data-layout-ignore>
+
+      <div id="water-shine"
+           data-start="0" data-duration="21.51" data-track-index="0"
+           data-layout-ignore></div>
+
+      <div class="actor clip" id="girl"
+           data-start="0" data-duration="21.51" data-track-index="1">
+        <img class="sil" src="assets/images/girl-fullbody.png" alt="">
+        <img class="dream" src="assets/images/girl-fullbody.png" alt="">
+        <img class="rim" id="rimR" src="assets/rim/girl-fullbody-rimR.png" alt="">
+        <img class="rim" id="rimL" src="assets/rim/girl-fullbody-rimL.png" alt="">
+      </div>
+
+      <div id="mirror" class="clip"
+           data-start="0" data-duration="21.51" data-track-index="2"
+           data-layout-ignore>
+        <img src="assets/images/girl-fullbody.png" alt="">
+      </div>
+    </div>
+
+    <!-- 观察者眼睑：非具体人，只是「某个意识在看」的视野隐喻 -->
+    <div id="eyes" class="clip"
+         data-start="0" data-duration="21.51" data-track-index="3"
+         data-layout-ignore>
+      <div id="defocus"></div>
+      <div id="lid-top" class="lid"></div>
+      <div id="lid-bottom" class="lid"></div>
+      <!-- 眼皮透血色：必须压在两块眼睑之上，闭合区才呈暗红而非死黑 -->
+      <div id="lid-glow"></div>
+    </div>
+   </div>
+  </div>
+
+<script>
+/* 局部 0-21.51s（全局 85.77-107.28）——观察者 POV
+   落底红闪时观察者还闭着眼（红闪像隔着眼皮感知的光），.4s 起被红光唤醒，
+   4.2s 内艰难睁眼（颤抖、两次小挣扎）；之后眼睑以 5s 自主节奏呼吸式眨动，
+   视野始终失焦（柔雾+人物重模糊），她只是黑色调里极模糊的若隐若现；
+   低鼓墙让整个视野持续微颤；12.53s（98.3 吉他 solo）视角艰难漂移、她开始隐去，
+   17.39s（103.16 能量骤降）她彻底消失，只剩红光与远城；
+   19.9s 起观察者缓缓合眼，与 c1-env 的压黑收束合一。 */
+window.__timelines = window.__timelines || {};
+const tl = gsap.timeline({ paused: true });
+window.__timelines["c1-shot4"] = tl;
+
+const view = document.getElementById("view");
+const eyesEl = document.getElementById("eyes");
+const lidTop = document.getElementById("lid-top");
+const lidBottom = document.getElementById("lid-bottom");
+const defocus = document.getElementById("defocus");
+const lidGlow = document.getElementById("lid-glow");
+const world = document.getElementById("world");
+const girl = document.getElementById("girl");
+const dream = girl.querySelector(".dream");
+const rimR = document.getElementById("rimR");
+const rimL = document.getElementById("rimL");
+const mirror = document.getElementById("mirror");
+const shine = document.getElementById("water-shine");
+const D = 21.51;
+const TG0 = 85.77;
+
+const PUNCHES = [
+  { t: 0.0, amp: 14, dur: .65 }
+];
+const clamp01 = v => Math.min(1, Math.max(0, v));
+const smooth = (a, b, x) => { x = clamp01((x - a) / (b - a)); return x * x * (3 - 2 * x); };
+const decay = x => x <= 0 ? 0 : Math.exp(-x * 5.2);
+
+function punchAt(t) {
+  let jx = 0, jy = 0;
+  for (const p of PUNCHES) {
+    const u = (t - p.t) / p.dur;
+    if (u < 0 || u > 1) continue;
+    const e = decay(u);
+    jx += Math.sin(t * 97 + p.t * 13) * p.amp * e;
+    jy += Math.cos(t * 113 + p.t * 7) * p.amp * e;
+  }
+  return { jx, jy };
+}
+
+/* 眼睑开合 0=闭合 1=全开：
+   0-4.2 艰难睁开（缓睁曲线 + 两个高频小挣扎，3s 后挣扎平息）；
+   4.2 之后 5s 自主呼吸节奏（闭合快、睁开缓，从不闭死，最低留 13% 缝）；
+   19.9 起缓缓合眼收束。 */
+function eyeOpen(t) {
+  let open;
+  if (t < 4.23) {
+    // 被红闪唤醒：缓睁曲线前移，88s（局部2.23）已能半睁看见红庭
+    const base = .86 * smooth(.35, 3.4, t);
+    const struggle = (.09 * Math.sin(t * 7.3) + .05 * Math.sin(t * 12.9))
+                   * smooth(.3, 1.15, t) * (1 - smooth(2.9, 4.0, t));
+    open = clamp01(base + struggle);
+  } else {
+    const u = (t - 4.23) / 5.0;
+    const cyc = (1 - Math.cos(u * Math.PI * 2)) / 2;   // 0 睁满 / 1 闭合
+    open = .86 - .52 * Math.pow(cyc, .5);              // 区间 .34-.86
+  }
+  // 结尾缓缓合眼，但留 9% 一线缝——c1-env 的余烬点（Verse2 烛台钩子）不被眼皮盖灭
+  return open * (.09 + .91 * (1 - smooth(19.9, 21.3, t)));
+}
+
+function draw(t) {
+  const enter = smooth(.05, .6, t);    // 红闪中即凝现，闪退后她已站住
+  const open = eyeOpen(t);
+
+  // —— 观察者视野微颤：低鼓墙起音核（持续鼓点=持续颤）+ 落底 punch ——
+  const _ar = window.AudioRig;
+  let sx = 0, sy = 0;
+  if (_ar) {
+    const sh = _ar.shake(TG0 + t, { excludeBand: 2, minS: .4, half: .09, win: .4 });
+    // 睁眼阶段挣扎期颤得更厉害
+    const strive = 1 + .8 * smooth(.3, 1.4, t) * (1 - smooth(3.4, 4.4, t));
+    sx = sh.x * 2.1 * sh.amp * strive;
+    sy = sh.y * 2.1 * sh.amp * strive;
+  }
+  // 98.3（局部12.53）吉他 solo：视角艰难漂移（缓横移 + 极轻倾头）
+  const drift = smooth(12.53, 18.0, t);
+  const vx = drift * (-34) + Math.sin(t * .41) * 3.4;
+  const vr = -.32 * drift;
+  const p = punchAt(t);
+  view.style.transform =
+    `translate(${(vx + sx).toFixed(2)}px, ${(sy).toFixed(2)}px) rotate(${vr.toFixed(3)}deg)`;
+  // 眼睑自身比世界多半帧的迟滞微抖（皮肉的重量感）
+  eyesEl.style.transform =
+    `translate(${(sx * .35).toFixed(2)}px, ${(sy * .35 + p.jy * .15).toFixed(2)}px)`;
+
+  // —— 睑裂：上/下睑内缘自屏中各退 open*540px ——
+  lidTop.style.transform = `translateY(${(-open * 540).toFixed(1)}px)`;
+  lidBottom.style.transform = `translateY(${(open * 540).toFixed(1)}px)`;
+  // 刚睁开时失焦最重，数秒后略适应但永不清晰；闭合时不必加雾
+  const focusAdapt = .30 + .62 * Math.exp(-Math.max(0, t - 3.8) / 2.6);
+  defocus.style.opacity = (focusAdapt * (.25 + .75 * open)).toFixed(3);
+
+  // 眼皮透血色：开合用光量说话——睑裂收小时整个视野沉入暗红（呼吸周期可被读出），
+  // 睁到八成以上退净；105.47（局部19.7）后退净，让合眼收束只剩纯黑与一线余烬
+  const shut = clamp01(1 - open / .80);
+  const glowFade = 1 - smooth(19.7, 21.0, t);
+  lidGlow.style.opacity = (shut * .85 * glowFade).toFixed(3);
+
+  // —— 世界：她 103.16（局部17.39）才彻底隐去 ——
+  const slide = smooth(12.53, 17.39, t);
+  const gone = smooth(15.9, 17.39, t);
+  const wsc = 1 + .05 * smooth(1.5, 12.5, t);
+  const wx = -80 * slide;
+  world.style.transform =
+    `translate(${(wx + p.jx).toFixed(1)}px, ${p.jy.toFixed(1)}px) scale(${wsc.toFixed(4)})`;
+  world.style.opacity = (1 - gone).toFixed(3);
+
+  // 落底：她从红闪中沉落站稳——y+24→0
+  const gy = 24 * (1 - smooth(.05, .6, t));
+  girl.style.transform = `translateY(${gy.toFixed(1)}px)`;
+  girl.style.opacity = enter.toFixed(3);
+  // 视野永远失焦：睁得越大略清、闭合时糊成一团（始终保留 4px 基础模糊）
+  const blur = 4 + 8 * (1 - open);
+  girl.style.filter = `blur(${blur.toFixed(2)}px)`;
+
+  // 梦境立绘：黑色调里随睁眼若隐若现（103.16 前随她一起消失）
+  const flick = .72 + .28 * Math.sin(t * .66 + .8);
+  dream.style.opacity = (.30 * open * flick * (1 - gone)).toFixed(3);
+
+  // rim 被重模糊化开成柔光，压强度，避免出现「清晰白边」
+  const rimFeel = .28 + .26 * open;
+  rimR.style.opacity = (rimFeel * enter * (1 - gone)).toFixed(3);   // 远城火光从右来
+  rimL.style.opacity = ((rimFeel * .34) * enter * (1 - gone)).toFixed(3);
+  mirror.style.opacity = (.5 * enter * (1 - gone)).toFixed(3);
+  shine.style.opacity = (enter * (1 - gone) * (.6 + .18 * Math.sin(t * 1.7))).toFixed(3);
+}
+
+const state = { t: 0 };
+tl.to(state, { t: D, duration: D, ease: "none",
+               onUpdate: () => draw(state.t) }, 0);
+draw(0);
+</script>
+</body>
+</html>

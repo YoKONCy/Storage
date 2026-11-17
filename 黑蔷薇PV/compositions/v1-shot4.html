@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Verse1 Shot4 — ほどけたリボンを 棺に結ぶ (51.22) 剪影版</title>
+<script src="assets/vendor/gsap.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: transparent; overflow: hidden; }
+  .clip { position: absolute; }
+
+  #root { width: 1920px; height: 1080px; overflow: hidden; }
+
+  .actor { position: absolute; will-change: opacity, transform; }
+  .actor img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: contain;
+  }
+  .sil { filter: brightness(.12) saturate(.25) contrast(1.5); }
+  .rim { mix-blend-mode: screen; }
+
+  /* 棺椁：全景中的前景主体，略偏左 */
+  #coffin-actor {
+    width: 760px; height: 760px;
+    left: 360px; top: 270px;
+    opacity: 0;
+  }
+
+  /* 少女 A5 背影：立于棺侧（右）、背对镜头面朝棺，亲手系上缎带的静默送葬者。
+     图比例 .664，盒子按比例贴合；左窗光给 rimL，右缘仅一丝环境反光 */
+  #mourner {
+    width: 584px; height: 880px;
+    left: 1068px; top: 150px;
+    opacity: 0;
+  }
+  #mourner .sil { filter: brightness(.17) saturate(.2) contrast(1.45); }
+  #mourner #mourner-rimR { opacity: .15; }
+
+  /* 石地暗影，接住两个主体 */
+  #floor-shadow {
+    left: 300px; right: 200px; bottom: 60px;
+    height: 150px;
+    background: radial-gradient(ellipse at 50% 50%,
+      rgba(10,12,20,.7) 0%, rgba(0,0,0,0) 75%);
+  }
+
+  #fade-black {
+    inset: 0;
+    background: #010103;
+    opacity: 0;
+  }
+</style>
+</head>
+<body>
+  <div id="root"
+       data-composition-id="v1-shot4"
+       data-width="1920"
+       data-height="1080">
+
+    <div id="floor-shadow" class="clip"
+         data-start="0" data-duration="2.71" data-track-index="1"
+         data-layout-ignore></div>
+
+    <div id="coffin-actor" class="clip actor"
+         data-start="0" data-duration="2.71" data-track-index="2">
+      <img class="sil" src="assets/images/coffin-ribbon.png" alt="">
+      <img class="rim" id="coffin-rimL" src="assets/rim/coffin-ribbon-rimL.png" alt="">
+      <img class="rim" id="coffin-rimR" src="assets/rim/coffin-ribbon-rimR.png" alt="">
+    </div>
+
+    <div id="mourner" class="clip actor"
+         data-start="0" data-duration="2.71" data-track-index="3">
+      <img class="sil" src="assets/images/girl-back.png" alt="">
+      <img class="rim" id="mourner-rim" src="assets/rim/girl-back-rimL.png" alt="">
+      <img class="rim" id="mourner-rimR" src="assets/rim/girl-back-rimR.png" alt="">
+    </div>
+
+    <div id="fade-black" class="clip"
+         data-start="0" data-duration="2.71" data-track-index="8"></div>
+  </div>
+
+<script>
+/* 局部 0-2.71s（全局 51.22-53.93）
+   黑羽过切中全景显现：棺在左、她在右；
+   1.0s「結ぶ」棺身轻拽回正（缎带收紧），rim 沿蝴蝶结冷闪一次；
+   风起（大气层），2.0s 压黑进入 Pre-Chorus 冷场。 */
+window.__timelines = window.__timelines || {};
+const tl = gsap.timeline({ paused: true });
+window.__timelines["v1-shot4"] = tl;
+
+const coffin = document.getElementById("coffin-actor");
+const rimL = document.getElementById("coffin-rimL");
+const rimR = document.getElementById("coffin-rimR");
+const mourner = document.getElementById("mourner");
+const mournerRim = document.getElementById("mourner-rim");
+const fade = document.getElementById("fade-black");
+
+gsap.set(coffin, { opacity: 0, scale: 1.04, rotation: -.4 });
+gsap.set(rimL, { opacity: .65 });
+gsap.set(rimR, { opacity: .22 });
+gsap.set(mourner, { opacity: 0, x: 24 });
+gsap.set(mournerRim, { opacity: .25 });
+
+// 黑羽遮挡期间淡入
+tl.to(coffin, { opacity: 1, duration: .7, ease: "power2.out" }, 0.05)
+  .to(coffin, { scale: 1.0, duration: .9, ease: "power1.out" }, 0.05)
+  .to(mourner, { opacity: 1, x: 0, duration: 1.0, ease: "power2.out" }, 0.2)
+  .to(mournerRim, { opacity: .9, duration: 1.2, ease: "power2.out" }, 0.4);
+
+// 系带收紧
+tl.to(coffin, { rotation: -.8, duration: .12, ease: "power1.in" }, 1.0)
+  .to(coffin, { rotation: 0, duration: .8, ease: "elastic.out(1,0.55)" }, 1.12);
+tl.to(rimL, { opacity: .85, duration: .1, yoyo: true, repeat: 1,
+               ease: "power2.out" }, 1.0);
+
+// 风里她的轮廓光在高位轻颤（1.65s 起，避开入场 tween 尾部）
+tl.to(mournerRim, { opacity: .62, duration: .18, yoyo: true, repeat: 4,
+                    ease: "sine.inOut" }, 1.65);
+
+// 压黑
+tl.to(fade, { opacity: 1, duration: .71, ease: "power2.inOut" }, 2.0);
+</script>
+</body>
+</html>

@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Chorus1 Shot2 — この胸の檻を 気高く砕いて (72.68-81.46)</title>
+<script src="assets/vendor/gsap.min.js"></script>
+<!-- 细层：真实起音/包络，链的绷紧微颤、烧红脉动踩乐器点 -->
+<script src="assets/vendor/audio-events.js"></script>
+<script src="assets/vendor/audio-rig.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: transparent; overflow: hidden; }
+  .clip { position: absolute; }
+  #root { width: 1920px; height: 1080px; overflow: hidden; }
+
+  .actor { position: absolute; will-change: opacity, transform, filter; }
+  .actor img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: contain;
+  }
+  .sil { filter: brightness(.13) saturate(.25) contrast(1.5); }
+  .rim { mix-blend-mode: screen; }
+
+  /* A6（跨镜统一基准盒 660×880 / left625） */
+  #sinker { width: 660px; height: 880px; left: 625px; }
+
+  /* 细链系统分前后两层 SVG：后景在少女之下、前景在她之上，包裹出牢笼纵深 */
+  #chain-back, #chain-front {
+    position: absolute; inset: 0;
+    width: 1920px; height: 1080;
+    overflow: visible;
+  }
+  /* 几何路径只用于 getPointAtLength 取点，本身不描边 */
+  .chain-path { fill: none; stroke: none; }
+  .chain-ring {
+    fill: none;
+    stroke-linecap: round;
+    vector-effect: non-scaling-stroke;
+  }
+  .screen { mix-blend-mode: screen; }
+</style>
+</head>
+<body>
+  <div id="root" data-composition-id="c1-shot2" data-width="1920" data-height="1080">
+    <div id="world" class="clip"
+         data-start="0" data-duration="8.78" data-track-index="0"
+         data-layout-ignore>
+
+      <!-- 后景链层：压在少女之下——她被关在链网「里面」，
+           部分链没入她身后的冷雾，而不是整张网贴在她脸上 -->
+      <svg id="chain-back" class="clip" viewBox="0 0 1920 1080"
+           data-start="0" data-duration="8.78" data-track-index="1">
+        <g id="chains-back"></g>
+      </svg>
+
+      <div id="sinker" class="clip actor"
+           data-start="0" data-duration="8.78" data-track-index="2">
+        <!-- 她在 67.0-68.37 build-up 中已完成 A6→A6b 撒手慢换（pre1-shot2），
+             白闪过后来到本镜，直接是 bloom 版；锁链从玫瑰崩解的红雾中凝出 -->
+        <img class="sil" id="sil" src="assets/images/girl-sinking-bloom.png" alt="">
+        <img class="rim" id="rimL" src="assets/rim/girl-sinking-bloom-rimL.png" alt="">
+        <img class="rim" id="rimR" src="assets/rim/girl-sinking-bloom-rimR.png" alt="">
+      </div>
+
+      <!-- 前景链层：横链/系扣链在她身前勾锁；近景粗链贴镜头斜扫 -->
+      <svg id="chain-front" class="clip" viewBox="0 0 1920 1080"
+           data-start="0" data-duration="8.78" data-track-index="3">
+        <defs>
+          <!-- 锁扣绷紧期的暗红晕（克制、低饱和） -->
+          <radialGradient id="knot-glow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%"  stop-color="rgba(222,74,40,.55)"/>
+            <stop offset="55%" stop-color="rgba(170,36,24,.18)"/>
+            <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
+          </radialGradient>
+          <!-- 脱开瞬间的冷白闪（冷铁语言，不是金白） -->
+          <radialGradient id="knot-flash" cx="50%" cy="50%" r="50%">
+            <stop offset="0%"  stop-color="rgba(248,250,255,.95)"/>
+            <stop offset="45%" stop-color="rgba(214,226,250,.35)"/>
+            <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
+          </radialGradient>
+          <!-- 锁扣红色光点：白热金红心 → 血红 → 透明 -->
+          <radialGradient id="knot-core-g" cx="50%" cy="50%" r="50%">
+            <stop offset="0%"  stop-color="rgba(255,246,226,1)"/>
+            <stop offset="26%" stop-color="rgba(255,158,88,.95)"/>
+            <stop offset="60%" stop-color="rgba(226,42,30,.45)"/>
+            <stop offset="100%" stop-color="rgba(150,10,14,0)"/>
+          </radialGradient>
+          <!-- 光点外圈柔红 -->
+          <radialGradient id="knot-halo-g" cx="50%" cy="50%" r="50%">
+            <stop offset="0%"  stop-color="rgba(255,96,58,.55)"/>
+            <stop offset="100%" stop-color="rgba(150,10,14,0)"/>
+          </radialGradient>
+        </defs>
+
+        <g id="chains-front"></g>
+
+        <!-- 中央锁扣：一枚红色光点（血雾凝出的链心）+ 光晕 + 脱开闪 -->
+        <g id="knot">
+          <circle id="knot-glow"  r="92" fill="url(#knot-glow)"  class="screen" opacity="0"/>
+          <circle id="knot-flash" r="70" fill="url(#knot-flash)" class="screen" opacity="0"/>
+          <g id="knot-rings" opacity="0">
+            <circle id="knot-halo" r="28" fill="url(#knot-halo-g)"/>
+            <circle id="knot-core" r="11" fill="url(#knot-core-g)"/>
+          </g>
+        </g>
+      </svg>
+    </div>
+  </div>
+
+<script>
+/* 局部 0-8.78s（全局 72.68-81.46）—— 细铁链「胸の檻」
+   0.00-0.90  八条细链从黑暗四面八方沿弯曲轨迹「拖入」，链头飞向她心口；
+   0.90-1.70  链身弯曲被逐一拉直、收成束（张力建立）；
+   1.55 起    传送带：链条被无形之力扯着匀速流动——形状不变、
+              链节沿链恒速滑动（齿轮/传送带感），链全程完整在画面内；
+   1.70-2.22  高频绷紧微颤，中央锁扣与近心链节烧红；
+   2.22       ≈74.9「砕いて」锁扣崩开：冷白一闪，交叉穿绕 0.35s 内释放
+              抽直（链网被「解开」），0.6s 松开波横向弹动后归于匀速流动；
+   8.32       ≈81.0 副歌第一乐段结束：碎解波自锁扣沿各链向外传播，
+              链节波前微亮一闪、随即脱扣散灭，切点前画面归于她与暗红。
+   全系统为时间纯函数，seek 任意帧状态确定。 */
+window.__timelines = window.__timelines || {};
+const tl = gsap.timeline({ paused: true });
+window.__timelines["c1-shot2"] = tl;
+
+const NS = "http://www.w3.org/2000/svg";
+const world = document.getElementById("world");
+const sinker = document.getElementById("sinker");
+const sil = document.getElementById("sil");
+const rimL = document.getElementById("rimL");
+const rimR = document.getElementById("rimR");
+
+// P9b 真链节素材（assets/images/chain-link-single.png，真 alpha 已验收）
+const USE_RING_IMG = true;
+const RING_SRC = "assets/images/chain-link-single.png";
+
+const D = 8.78;
+const BREAK = 2.22;
+
+/* 细层音频量（draw 每帧算一次，chainState/环循环共用，纯函数 seek 安全）：
+   drum  绷紧段低/中频起音（金属颤幅）、
+   breath 人声带能量基线以上部分（烧红随句拍呼吸） */
+const AUDIO_AT = { drum: 0, breath: 0 };
+
+// 笼心：对齐她交抱的双手心口（与 fx 层碎屑爆点一致）
+const CX = 883, CY = 440;
+const SCREEN_CX = 960, SCREEN_CY = 540;
+
+const clamp01 = v => Math.min(1, Math.max(0, v));
+const smooth = (a, b, x) => { x = clamp01((x - a) / (b - a)); return x * x * (3 - 2 * x); };
+const lerp = (a, b, k) => a + (b - a) * k;
+const lerpC = (c1, c2, k) => [
+  Math.round(lerp(c1[0], c2[0], k)),
+  Math.round(lerp(c1[1], c2[1], k)),
+  Math.round(lerp(c1[2], c2[2], k))
+];
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+const PUNCHES = [
+  { t: 0.0,  amp: 16, dur: .5 },   // 72.68「砕いて」玫瑰粉碎炸开：全镜最强一击
+  { t: BREAK, amp: 9, dur: .55 },
+  { t: 6.4,  amp: 4, dur: .3 },    // 79.08 乐句重音柔震
+  { t: 8.32, amp: 5, dur: .45 }    // ≈81.0 崩解起点：碎解波的启动柔震
+];
+function decay(x) { return x <= 0 ? 0 : Math.exp(-x * 5.2); }
+function punchAt(t) {
+  let jx = 0, jy = 0;
+  for (const p of PUNCHES) {
+    const u = (t - p.t) / p.dur;
+    if (u < 0 || u > 1) continue;
+    const e = decay(u);
+    jx += Math.sin(t * 97 + p.t * 13) * p.amp * e;
+    jy += Math.cos(t * 113 + p.t * 7) * p.amp * e;
+  }
+  return { jx, jy };
+}
+
+/* ---------- 链群几何配置（种子固定，禁止 Math.random） ----------
+   意象是「包裹她身体的牢笼」而非从一点发出的辐条：
+   链分三层深度——back 没入她身后冷雾、front 在身前勾锁、
+   near 一条近景粗链贴镜头斜扫；非横链大幅偏心，锁扣崩开后
+   被释放的网向四周弹开，绝不聚成星芒。所有链全程完整在画面内。 */
+// 贯穿线手工编排：[角度°, 勾扣强度, 法向偏心(px), 切向偏心(px), 深度层]
+// 关键力学：非横链的基线远在她身盒之外（断扣后网弹散于此），
+// 但强勾 w≈.9 把它们在锁扣处弯折收拢成束——锁扣崩开前聚心是「绷紧」，
+// 崩开后网向四周弹开才是「解开」；传送带期绝不再有星芒
+const THROUGH_CFG = [
+  { a: 3,    w: .12, n: 0,    t: 0,   layer: "front" },  // 横链：唯一基线穿过锁扣
+  { a: 92,   w: .90, n: 360,  t: 0,   layer: "back"  },  // 竖链：弹散到她左后
+  { a: 38,   w: .85, n: 400,  t: 60,  layer: "back"  },  // 左下斜链
+  { a: 140,  w: .90, n: -260, t: -120,layer: "back"  },  // 中下链：沿她裙摆
+  { a: -22,  w: .85, n: -300, t: 0,   layer: "front" },  // 左上链
+  { a: -58,  w: 0,   n: 420,  t: 120, layer: "near"  },  // 近景粗链：她右前斜扫、不被勾
+  // 屏内隐没短链：两端雾隐在她身侧暗部而非屏边（链在黑暗里继续延伸，不是钉在画框上）
+  // 角度须避开已有方向及其 +180° 平行角（140° 与 -40° 平行会成双轨）
+  { a: 52,   w: 0, n: 0, t: 0, layer: "back", p0: [520, 300], p1: [1050, 980] }
+];
+// 系扣线从上边两侧斜拉入扣（方位角指屏内雾隐锚点，sin<0 在上方）——前景
+const TIED_AN = [-54, -126].map(d => d * Math.PI / 180);
+const MAX_RINGS = 170;         // 每条链预创建节点上限
+/* 深度层参数：显示框 w/h（px，整张素材含透明边距的框，真环体约占 49%×87%）、
+   沿链节距 step、整体 alpha 倍率、基线亮度 dark（真链节黑铁调子极暗，
+   必须提亮才压得住黑底；brightness 只抬链本身、黑底 0 不受影响）、端头雾隐宽 */
+const LAYER_RING = {
+  back:  { w: 11, h: 22, step: 18, alpha: .60, dark: 1.50, fogIn: .16, glow: .30 },
+  front: { w: 14, h: 28, step: 21, alpha: 1,   dark: 1.90, fogIn: .10, glow: .45 },
+  near:  { w: 34, h: 68, step: 35, alpha: .55, dark: 1.15, fogIn: .12, glow: .40 }
+};
+/* 传送带：链条被无形之力扯着的匀速流动——形状不变，链节沿链滑动 */
+const FLOW_SPD = 150;          // 流速 px/s（≈7 节/秒滑过定点，缓慢可感）
+const FLOW_T0  = 1.55;         // 拉直中段起链节即开始被扯动
+/* 碎解波：≈81.0 副歌第一乐段结束，链自锁扣向外脱扣散灭 */
+const CRUMBLE_T  = 8.32;
+const CRUMBLE_V  = 1150;       // 波沿链传播速度 px/s
+const CRUMBLE_DUR = .42;       // 每环从波到达到散灭的时长
+/* 中段微事件（填补 75-81s 的事件真空，反 PPT 的中层节奏） */
+const STRESS_T   = 6.4;        // ≈79.08 乐句重音：全链金属应力微亮（沿链快传）
+const STRESS_V   = 2600;       // 应力光沿链传播速度（很快，近似同时一凛）
+const PRECRACK_T = 8.0;        // ≈80.68 预裂：近锁扣链节高频微颤+火花，碎解前兆
+const END_INSET = 110;         // 链端收进屏内的基准距离（雾隐端头，全程不出画）
+const rng = mulberry32(20260928);
+
+// 冷铁本色 / 烧红张力色
+const COL_IRON = [176, 184, 202];
+const COL_HEAT = [214, 78, 44];
+const COL_FLASH = [250, 250, 255];
+
+// 沿方位射线求「屏幕外交点」
+function edgePoint(ang, margin) {
+  const co = Math.cos(ang), si = Math.sin(ang);
+  const tx = Math.abs(co) < 1e-4 ? 1e9 : (co > 0 ? (1920 - SCREEN_CX) / co : -SCREEN_CX / co);
+  const ty = Math.abs(si) < 1e-4 ? 1e9 : (si > 0 ? (1080 - SCREEN_CY) / si : -SCREEN_CY / si);
+  const edge = Math.min(tx, ty);
+  return [SCREEN_CX + co * (edge + margin), SCREEN_CY + si * (edge + margin)];
+}
+function discPoint(r0, r1) {
+  const a = rng() * Math.PI * 2, r = r0 + rng() * (r1 - r0);
+  return [CX + Math.cos(a) * r, CY + Math.sin(a) * r];
+}
+/* 永久手作微弯：锁扣崩开也不释放的小弯（真实手工铁链绝非数学直线），
+   近景松链弯更大；近水平主链给宽而缓的起伏（避免横链像制图基准线）；
+   种子固定，位置/幅度/方向全确定 */
+function makeWobbles(layer, horizontal) {
+  const out = [];
+  const n = layer === "near" ? 3 : horizontal ? 3 : 2;
+  for (let z = 0; z < n; z++) {
+    out.push({
+      s: .15 + rng() * .7,
+      d: rng() < .5 ? -1 : 1,
+      amp: layer === "near" ? 16 + rng() * 12
+           : horizontal ? 12 + rng() * 11
+           : 7 + rng() * 6,
+      sig: horizontal ? .07 + rng() * .07 : .05 + rng() * .05
+    });
+  }
+  return out;
+}
+
+function buildChains() {
+  const list = [];
+  // —— 6 条贯穿线：手工角度+偏心，强链在锁扣拢成结、弱链从两侧斜穿 ——
+  for (const cfg of THROUGH_CFG) {
+    const a = cfg.a * Math.PI / 180;
+    const ux = Math.cos(a), uy = Math.sin(a);
+    const nx = -uy, ny = ux;
+    let ax, ay, bx, by, mx, my, tn, tp, len;
+    if (cfg.p0) {
+      // 屏内隐没短链：直接采用给定的两个暗部雾隐端点
+      [ax, ay] = cfg.p0; [bx, by] = cfg.p1;
+      mx = (ax + bx) / 2; my = (ay + by) / 2;
+      len = Math.hypot(bx - ax, by - ay); tn = tp = len / 2;
+    } else {
+      // 基线中点 = 笼心 + 法向偏心 + 切向偏心
+      mx = CX + nx * cfg.n + ux * cfg.t;
+      my = CY + ny * cfg.n + uy * cfg.t;
+      // 从中点沿 ±u 各取到「自己一侧最近屏边」的距离，两端各外延 margin，
+      // 不浪费节点在屏外巨长线段上（近垂直链尤其重要）
+      const tpX = Math.abs(ux) < 1e-4 ? 1e9 : (ux >= 0 ? (1920 - mx) / ux : -mx / ux);
+      const tpY = Math.abs(uy) < 1e-4 ? 1e9 : (uy >= 0 ? (1080 - my) / uy : -my / uy);
+      // 负向参数 = 沿 -u 到最近屏边（t 为正）
+      const toNX = Math.abs(ux) < 1e-4 ? 1e9 : (ux >= 0 ? mx / ux : (mx - 1920) / ux);
+      const toNY = Math.abs(uy) < 1e-4 ? 1e9 : (uy >= 0 ? my / uy : (my - 1080) / uy);
+      // 端点收进屏内（雾隐端头）：链全程完整在画面内，不再伸向屏外
+      tp = Math.max(150, Math.min(tpX, tpY) - (END_INSET + rng() * 70));
+      tn = Math.max(150, Math.min(toNX, toNY) - (END_INSET + rng() * 70));
+      ax = mx - ux * tn; ay = my - uy * tn;
+      bx = mx + ux * tp; by = my + uy * tp;
+      len = tn + tp;
+    }
+    const [kx, ky] = discPoint(50, 130);               // 勾点彼此分离（网只被轻拢）
+    const layer = cfg.layer;
+    // 近景链保持松垮大弧（像松松挂在镜头前），其余链只留手作小弯
+    const bendBase = layer === "near" ? .13 + rng() * .06 : .05 + rng() * .05;
+    list.push({
+      type: "through",
+      layer,
+      ax, ay, bx, by, kx, ky,
+      mx, my, tn, tp,                                 // 基线中点与两端半长（供交叉计算）
+      len,                                            // 链长（传送带流速归一用）
+      ux, uy,
+      hookW: cfg.w,                                // 局部勾扣强度（强链成结、弱链路过）
+      freeBend: len * bendBase * (rng() < .5 ? -1 : 1),
+      phase: rng() * Math.PI * 2,
+      segs: Math.min(MAX_RINGS, Math.floor(len / LAYER_RING[layer].step)),
+      wobbles: makeWobbles(layer, Math.abs(uy) < .2),
+      kinks: []
+    });
+  }
+  // —— 2 条系扣线：锚点收进屏内上方雾隐处 ——
+  for (const a0 of TIED_AN) {
+    const ang = a0 + (rng() - .5) * .14;
+    const [ax, ay] = edgePoint(ang, -(END_INSET + rng() * 80));
+    const [kx, ky] = discPoint(10, 46);
+    const dx = kx - ax, dy = ky - ay, len = Math.hypot(dx, dy);
+    list.push({
+      type: "tied",
+      layer: "front",
+      ax, ay, kx, ky, len,
+      ux: dx / len, uy: dy / len,
+      nx: -dy / len, ny: dx / len,
+      freeBend: len * (.13 + rng() * .10) * (rng() < .5 ? -1 : 1),
+      phase: rng() * Math.PI * 2,
+      segs: Math.min(MAX_RINGS, Math.floor(len / LAYER_RING.front.step)),
+      wobbles: makeWobbles("front", false),
+      kinks: []
+    });
+  }
+
+  /* 交叉穿绕：求每对链的基线交点，在交点处注入交替方向的局部小弯折。
+     真实锁链在交叉处一上一下互相压绕，绝不是两条直线几何相交；
+     弯折在断扣后随 hk 释放抽直——这就是「解开」的物理语义。 */
+  for (const ch of list) {
+    // 基线描述：中点 M、方向 u、有效参数区间
+    if (ch.type === "through") {
+      const lam = ((ch.kx - ch.mx) * ch.ux + (ch.ky - ch.my) * ch.uy);
+      ch.sHook = (lam + ch.tn) / (ch.tn + ch.tp);    // 勾点对应的基线 s 参数
+    }
+  }
+  const baseOf = (ch) => ch.type === "through"
+    ? { mx: ch.mx, my: ch.my, ux: ch.ux, uy: ch.uy, nx: -ch.uy, ny: ch.ux }
+    : { mx: ch.ax, my: ch.ay, ux: ch.ux, uy: ch.uy, nx: ch.nx, ny: ch.ny };
+  const paramRange = (ch) => ch.type === "through"
+    ? { lo: -ch.tn + 30, hi: ch.tp - 30, toS: (lam) => (lam + ch.tn) / (ch.tn + ch.tp) }
+    : { lo: 30, hi: ch.len - 30, toS: (lam) => lam / ch.len };
+  for (let i = 0; i < list.length; i++) {
+    for (let j = i + 1; j < list.length; j++) {
+      const A = baseOf(list[i]), B = baseOf(list[j]);
+      const det = A.nx * B.ny - A.ny * B.nx;
+      if (Math.abs(det) < 1e-6) continue;
+      const hA = A.nx * A.mx + A.ny * A.my;
+      const hB = B.nx * B.mx + B.ny * B.my;
+      const qx = (hA * B.ny - hB * A.ny) / det;
+      const qy = (A.nx * hB - B.nx * hA) / det;
+      const lamA = (qx - A.mx) * A.ux + (qy - A.my) * A.uy;
+      const lamB = (qx - B.mx) * B.ux + (qy - B.my) * B.uy;
+      const rA = paramRange(list[i]), rB = paramRange(list[j]);
+      if (lamA < rA.lo || lamA > rA.hi || lamB < rB.lo || lamB > rB.hi) continue;
+      const sA = rA.toS(lamA), sB = rB.toS(lamB);
+      // 锁扣 85px 内保持干净（结只留给横链与系扣线）
+      if (Math.hypot(qx - CX, qy - CY) < 85) continue;
+      // 真实编织：交叉处只有一条链拱起绕过，另一条保持笔直（一上一下）；
+      // 任意两个绕结屏幕距离 <75px 时只保留先算到的，避免多链同区堆成疙瘩
+      const dir = (i + j) % 2 === 0 ? 1 : -1;
+      const crowded = list.some(c => c.kinks.some(k => Math.hypot(k.x - qx, k.y - qy) < 75));
+      if (!crowded) list[i].kinks.push({ s: sA, d: dir, x: qx, y: qy });  // B 链保持直
+    }
+  }
+  return list;
+}
+const CHAINS = buildChains();
+
+/* ---------- 构建 SVG 节点 ---------- */
+const chainsBack = document.getElementById("chains-back");
+const chainsFront = document.getElementById("chains-front");
+const knot = document.getElementById("knot");
+const knotGlow = document.getElementById("knot-glow");
+const knotFlash = document.getElementById("knot-flash");
+const knotRings = document.getElementById("knot-rings");
+const knotCore = document.getElementById("knot-core");
+const knotHalo = document.getElementById("knot-halo");
+
+for (const ch of CHAINS) {
+  const g = document.createElementNS(NS, "g");
+  g.setAttribute("class", "chain-group");
+  const path = document.createElementNS(NS, "path");
+  path.setAttribute("class", "chain-path");
+  g.appendChild(path);
+  // 本深度层的链节显示框（真环体在框内约占 49%×87%）
+  const lr = LAYER_RING[ch.layer];
+  const ringEls = [];
+  for (let i = 0; i < MAX_RINGS; i++) {
+    let ring;
+    if (USE_RING_IMG) {
+      ring = document.createElementNS(NS, "image");
+      ring.setAttribute("href", RING_SRC);
+      ring.setAttribute("x", (-lr.w / 2).toFixed(1));
+      ring.setAttribute("y", (-lr.h / 2).toFixed(1));
+      ring.setAttribute("width", lr.w); ring.setAttribute("height", lr.h);
+    } else {
+      // 矢量占位（回退用）：尺寸随深度层，细而密才像相扣的锁链
+      ring = document.createElementNS(NS, "ellipse");
+      ring.setAttribute("class", "chain-ring");
+      ring.setAttribute("rx", (lr.w * .36).toFixed(1));
+      ring.setAttribute("ry", (lr.h * .43).toFixed(1));
+      ring.setAttribute("stroke-width", ch.layer === "near" ? 4.5 : 2.9);
+    }
+    ring.style.opacity = "0";
+    g.appendChild(ring);
+    ringEls.push(ring);
+  }
+  // 崩解散灭的确定性随机向量（每环固定的抛出方向/距离/自旋）
+  ch.crumA = [];
+  for (let i = 0; i < MAX_RINGS; i++) {
+    ch.crumA.push({
+      a: rng() * Math.PI * 2,
+      r: 10 + rng() * 18,
+      rot: (rng() - .5) * 130
+    });
+  }
+  ch.g = g; ch.path = path; ch.ringEls = ringEls;
+  // 组级冷微光：黑铁棱边在黑底上的「冷铁自发光」，也把过暗的链从黑里托出来
+  g.style.filter =
+    `drop-shadow(0 0 ${ch.layer === "near" ? 1.5 : 1.1}px ` +
+    `rgba(150,170,215,${LAYER_RING[ch.layer].glow}))`;
+  // 按深度挂进前后两层 SVG（缺失 appendChild 链组会是 detached 节点，屏上永无链）
+  (ch.layer === "back" ? chainsBack : chainsFront).appendChild(g);
+}
+
+/* ---------- 每帧：生成一条链当前的折线 path 与揭示窗 ----------
+   path 不可见，仅供 getPointAtLength 沿弧长取链节；折线用「基线+扰动」合成：
+   大弧 / 勾扣 / 交叉穿绕弯折 / 松垂 / 甩鞭，全部是时间的纯函数。 */
+const KINK_AMP = 14;            // 拱绕链的起伏幅度（px，需跨过另一条链的环径）
+const KINK_SIG = .030;          // 拱绕沿 s 的宽度（≈55px，平缓拱起而非急折）
+function chainState(ch, t) {
+  const grow = smooth(.02, .90, t);
+  const broke = smooth(BREAK, BREAK + .06, t);
+  // 「砕いて」锁扣崩开：交叉穿绕 0.35s 内释放抽直——链网被「解开」；
+  // 链条并不抽离，继续保持被无形之力扯着的传送带匀速流动
+  const hk = 1 - smooth(BREAK, BREAK + .35, t);
+
+  // 细层音频量在 draw 里每帧只算一次（AUDIO_AT），这里直接读，避免每链重复扫事件
+  const isNear = ch.layer === "near";
+  // 拖入期甩鞭弧加成（铁链刚性，弧幅克制）；收束保留少量手作弯（不死直）
+  const flyBend = 1 + .35 * (1 - smooth(.02, .90, t));
+  let loosen = (1 - smooth(.90, 1.70, t) * .85) * flyBend;
+  if (isNear) loosen = Math.max(loosen, .42);        // 近景链始终松垮斜挂
+  // 绷紧微颤：平时 3.4px 的金属细颤，鼓点击打点颤幅猛增（链条被震得嗡嗡响）
+  const tenseVib = (t > 1.7 && t < BREAK)
+    ? Math.sin(t * 55 + ch.phase) * (3.4 + AUDIO_AT.drum * 4.6) : 0;
+  // 中段张力呼吸：随人声带能量，链条被扯着的力有极轻微的周期松紧（只动形不改流速）
+  const breathe = AUDIO_AT.breath * 5 * smooth(3.5, 4.5, t)
+                  * (1 - smooth(CRUMBLE_T - .6, CRUMBLE_T, t));
+  // 断后张力稍降：轻微松垂回升（链仍被扯着流动，不垮；近景链不连锁扣不参与）
+  const sag = isNear ? 0 : broke * (ch.layer === "back" ? 36 : 66);
+
+  let e0x, e0y, e1x, e1y, lo, hi;
+  let inward = false;   // 贯穿线：两头从两端雾处向 sHook 合拢（窗外可见）
+  if (ch.type === "through") {
+    e0x = ch.ax; e0y = ch.ay; e1x = ch.bx; e1y = ch.by;
+    if (isNear) {
+      // 近景链：从上端雾中单向斜挂入画（不参与链头飞向左心口的叙事）
+      lo = 0; hi = grow;
+    } else {
+      // 两个链头自两端雾中滑出、沿链向勾扣点 sHook 合拢
+      // （grow=0 全隐；grow=1 两前沿在 sHook 相遇、全链显现）
+      lo = grow * ch.sHook; hi = 1 - grow * (1 - ch.sHook);
+      inward = true;
+    }
+  } else {
+    // 系扣线：锁扣端断后短暂下坠（失重的 0.2s 呼吸）
+    const sink = 60 * smooth(BREAK, BREAK + .20, t);
+    e0x = ch.ax; e0y = ch.ay;
+    e1x = ch.kx; e1y = ch.ky + sink;
+    lo = 0; hi = grow;
+  }
+  const nvx = ch.type === "through" ? -ch.uy : ch.nx;
+  const nvy = ch.type === "through" ? ch.ux : ch.ny;
+  const bendK = ch.freeBend * loosen + tenseVib
+              + Math.sin(t * 2.1 + ch.phase) * breathe;
+
+  // 贯穿线勾扣：sHook 处朝勾点 K 的局部吸引（断后释放）
+  let hkx = 0, hky = 0;
+  if (ch.type === "through") {
+    const bhx = e0x + (e1x - e0x) * ch.sHook;
+    const bhy = e0y + (e1y - e0y) * ch.sHook;
+    hkx = (ch.kx - bhx) * ch.hookW * hk;
+    hky = (ch.ky - bhy) * ch.hookW * hk;
+  }
+
+  const segs = ch.segs;
+  let d = "";
+  for (let k = 0; k <= segs; k++) {
+    const s = k / segs;
+    let x = e0x + (e1x - e0x) * s;
+    let y = e0y + (e1y - e0y) * s;
+    // 大弧 + 绷紧颤 + 甩鞭（端部归 0）
+    const arc = Math.sin(Math.PI * s);
+    x += nvx * bendK * arc;
+    y += nvy * bendK * arc;
+    if (ch.type === "through") {
+      // 勾扣吸引 + 中段松垂
+      const gh = Math.exp(-Math.pow((s - ch.sHook) / .20, 2));
+      x += hkx * gh; y += hky * gh;
+      y += sag * arc;
+    } else {
+      y += sag * s * s;                            // 系扣线：锁扣端下沉
+    }
+    // 交叉穿绕弯折（断扣后随 hk 释放抽直）
+    for (const kk of ch.kinks) {
+      const g = KINK_AMP * hk * Math.exp(-Math.pow((s - kk.s) / KINK_SIG, 2));
+      x += nvx * kk.d * g;
+      y += nvy * kk.d * g;
+    }
+    // 永久手作微弯（不释放，链任何时候都不是数学直线）
+    for (const wb of ch.wobbles) {
+      const gw = wb.amp * Math.exp(-Math.pow((s - wb.s) / wb.sig, 2));
+      x += nvx * wb.d * gw;
+      y += nvy * wb.d * gw;
+    }
+    d += (k === 0 ? "M " : " L ") + x.toFixed(1) + " " + y.toFixed(1);
+  }
+
+  // 传送带流动相位：拉直中段起，链节沿链以 FLOW_SPD 匀速滑动（形状不变）
+  const flow = FLOW_SPD * Math.max(0, t - FLOW_T0) / ch.len;
+  const tense = smooth(1.50, BREAK, t) * (1 - broke);   // 张力（烧红）
+  const flashK = Math.exp(-Math.pow((t - BREAK) / .075, 2)) * broke;
+  return { d, flow, tense, flashK, lo, hi, inward };
+}
+
+function draw(t) {
+  const tg = 72.68 + t;
+  // 细层：本帧真实音频量（无 AudioRig 时全 0，退回纯手工编排）
+  const _ar = window.AudioRig;
+  if (_ar) {
+    // 鼓组起音全频计入（build-up/chorus 的重击多在 b=2，排除会哑掉）
+    AUDIO_AT.drum = _ar.hits(tg, { minS: .42, half: .07, win: .30 });
+    AUDIO_AT.breath = Math.max(0, _ar.env("voice", tg) - .40);
+  } else {
+    AUDIO_AT.drum = AUDIO_AT.breath = 0;
+  }
+  const sinkExtra = 26 * smooth(BREAK, BREAK + .5, t);
+  const top = 90 + (tg - 65.7) * 7 + sinkExtra;
+  const rot = -7.5 - 2 * smooth(0, D, t) - sinkExtra * .02;
+  sinker.style.transform =
+    `translateY(${top.toFixed(1)}px) rotate(${rot.toFixed(2)}deg)`;
+  // 她已是 A6b 撒手版（上一镜 build-up 中慢换完成），本镜全程实底
+  sil.style.opacity = "1";
+  rimL.style.opacity = ".60";
+  rimR.style.opacity = ".38";
+
+  const broke = smooth(BREAK, BREAK + .06, t);
+  const wAge = t - BREAK;
+
+  for (const ch of CHAINS) {
+    const st = chainState(ch, t);
+    ch.path.setAttribute("d", st.d);
+    const L = ch.path.getTotalLength();
+
+    const through = ch.type === "through";
+    const lr0 = LAYER_RING[ch.layer];
+    // 传送带：环沿折线匀速滑动（i 固定翻转模式随整串平移，相邻交替关系不变）
+    for (let i = 0; i < ch.segs; i++) {
+      const ring = ch.ringEls[i];
+      const s = ((i / ch.segs) + st.flow) % 1;
+      // 生长揭示窗：贯穿线两链头从两端雾处向 sHook 合拢（两前沿之外可见），
+      // 近景链/系扣线为单向长入（窗内可见）
+      const hidden = st.inward
+        ? (s > st.lo + .015 && s < st.hi - .015)
+        : (s < st.lo - .015 || s > st.hi + .015);
+      if (hidden) { ring.style.opacity = "0"; continue; }
+      const pt = ch.path.getPointAtLength(Math.min(L, s * L));
+      const pt2 = ch.path.getPointAtLength(Math.min(L, s * L + 22));
+      const angRad = Math.atan2(pt2.y - pt.y, pt2.x - pt.x);
+      const ang = angRad * 180 / Math.PI;
+      const flip = i % 2 === 0 ? 0 : 90;         // 相邻链节翻转穿插
+
+      // 断扣瞬间：一道「松开波」自锁扣向四周空间扩散（按到锁扣的屏幕
+      // 距离定相位，自动适配所有方向的链），链节横向弹动如活物脱力
+      const dK = Math.hypot(pt.x - CX, pt.y - CY);
+      let ox = 0, oy = 0;
+      if (wAge > 0) {
+        const dist = dK / 300;
+        const looseW = Math.sin(wAge * 14 - dist * 6 + ch.phase)
+          * 26 * smooth(0, .14, wAge) * broke
+          * (1 - smooth(.55, 1.15, wAge));
+        ox = Math.sin(angRad) * looseW;
+        oy = -Math.cos(angRad) * looseW;
+      }
+
+      // 预裂：碎解波前 0.32s，近锁扣链节先开始高频微颤（金属疲劳的呻吟）
+      const preC = smooth(PRECRACK_T, CRUMBLE_T, t);
+      if (preC > 0 && dK < 150) {
+        const q = preC * (1 - dK / 150);
+        ox += Math.sin(t * 47 + i * 2.7) * 2.2 * q;
+        oy += Math.cos(t * 53 + i * 1.9) * 2.2 * q;
+      }
+
+      /* 碎解波：≈81.0 副歌第一乐段结束，锁扣处起波沿链向外传播——
+         波前经过瞬间环微亮一闪，随即脱扣散灭（外抛+自旋+渐灭） */
+      const crumArr = CRUMBLE_T + dK / CRUMBLE_V;
+      const ck = smooth(crumArr, crumArr + CRUMBLE_DUR, t);
+      if (ck >= 1) { ring.style.opacity = "0"; continue; }
+      const crumFlash = ck > 0 ? Math.exp(-Math.pow((t - crumArr) / .10, 2)) : 0;
+      const ca = ch.crumA[i];
+      const crumX = Math.cos(ca.a) * ca.r * ck;
+      const crumY = Math.sin(ca.a) * ca.r * ck;
+
+      // 两端雾中渐入渐出（端头隐入黑暗；后景链雾窗更深）；近锁扣略大略亮
+      const fi = lr0.fogIn;
+      const fog = through
+        ? smooth(0, fi, s) * smooth(1, 1 - fi * .6, s)
+        : smooth(0, Math.max(fi, .18), s);
+      const pulseK = (1 + .08 * Math.exp(-Math.pow(dK / 180, 2))) * (1 - ck * .35);
+      // 生长飞行头反光（贯穿线两个前沿）
+      const glintPos = through ? Math.min(Math.abs(s - st.lo), Math.abs(s - st.hi))
+                              : Math.abs(s - st.hi);
+      const headGlint = .55 * Math.exp(-Math.pow(glintPos / .045, 2)) * (1 - broke);
+      // 红余温：链头自玫瑰崩解的红雾中凝出，前沿链节带铁红，约 1s 内冷却成黑铁
+      const ember = headGlint * (1 - smooth(.22, 1.02, t));
+      // 张力烧红：只烧穿过锁扣附近的链节（屏幕距离高斯，σ95）；
+      // 亮度随人声带包络轻微呼吸，唱词重音处烧得更烫
+      const heat = st.tense * Math.exp(-Math.pow(dK / 95, 2)) * (.9 + AUDIO_AT.breath * .35);
+      const heatAll = heat + .9 * ember;
+      // 79.08 应力闪光沿链快传（金属集体一凛：亮度翻倍、窗略宽到约 5 帧可辨）；
+      // 预裂期固定环位迸火花
+      const flashBoost = st.flashK * Math.exp(-Math.pow(dK / 280, 2));
+      const stress = 1.15 * Math.exp(-Math.pow((t - STRESS_T - dK / STRESS_V) / .15, 2));
+      const spark = (preC > 0 && (i * 7) % 19 === 3 && dK < 150)
+        ? Math.max(0, Math.sin(t * 23 + i * 3)) * preC * .8 : 0;
+
+      const alpha = fog * (1 - ck) * lr0.alpha;
+      ring.setAttribute("transform",
+        `translate(${(pt.x + ox + crumX).toFixed(1)} ${(pt.y + oy + crumY).toFixed(1)}) rotate(${(ang + flip + ca.rot * ck).toFixed(1)}) scale(${pulseK.toFixed(3)})`);
+      ring.style.opacity = alpha.toFixed(3);
+      if (USE_RING_IMG) {
+        // 真链节光学：黑铁暗部永不动，filter 只染棱边高光——
+        // sepia/saturate/hue 把亮棱烧成铁红，brightness 承担冷闪/应力/火花，
+        // 深度层 dark 统一压暗（后景隐雾、近景剪影）
+        const bri = (1 + .32 * heat + .55 * ember + .7 * headGlint + 1.7 * flashBoost
+                     + .9 * crumFlash + .55 * stress + .9 * spark) * lr0.dark;
+        ring.style.filter =
+          `brightness(${bri.toFixed(2)}) sepia(${(0.85 * heatAll).toFixed(2)}) ` +
+          `saturate(${(1 + 2.4 * heat + 2.2 * ember).toFixed(2)}) hue-rotate(${(-30 * heatAll).toFixed(0)}deg)`;
+      } else {
+        let col = lerpC(COL_IRON, COL_HEAT, heat);
+        const boost = 1 + headGlint + flashBoost + crumFlash * .9 + stress * .7 + spark;
+        col = [
+          Math.min(255, Math.round(col[0] * boost)),
+          Math.min(255, Math.round(col[1] * boost)),
+          Math.min(255, Math.round(col[2] * boost))
+        ];
+        ring.setAttribute("stroke",
+          `rgba(${col[0]},${col[1]},${col[2]},${alpha.toFixed(3)})`);
+      }
+    }
+    // 预创建但本链用不到的节点保持隐藏
+    for (let i = ch.segs; i < MAX_RINGS; i++) ch.ringEls[i].style.opacity = "0";
+  }
+
+  /* ---------- 中央锁扣：一枚红色光点（链网 .9s 合拢后凝现，碎解波起熄灭） ---------- */
+  const knotOn = smooth(.82, 1.15, t)
+    * (1 - smooth(BREAK, BREAK + .22, t))
+    * (1 - smooth(CRUMBLE_T, CRUMBLE_T + .45, t));
+  // 绷紧期光点高频微颤，越近断扣越剧烈（金属疲劳的呻吟）
+  const tAmp = t > 1.7 && t < BREAK
+    ? 1.4 + 3.2 * smooth(1.7, BREAK, t) : 0;
+  const tremble = Math.sin(t * 60) * tAmp + Math.sin(t * 83 + 1.2) * tAmp * .45;
+  knot.setAttribute("transform",
+    `translate(${CX} ${CY}) translate(${tremble.toFixed(1)} ${tremble.toFixed(1)})`);
+  // 暗红晕：凝现即有微亮底，随张力升满
+  const glowA = knotOn * (.22 + .7 * smooth(1.5, BREAK, t));
+  knotGlow.setAttribute("opacity", glowA.toFixed(3));
+  // 脱开冷白闪：峰值更脆更亮、但仍是锁扣局部一线冷光
+  const fA = Math.exp(-Math.pow((t - BREAK) / .09, 2)) * smooth(BREAK - .03, BREAK, t);
+  const fS = 1 + fA * 3.0;
+  knotFlash.setAttribute("opacity", fA.toFixed(3));
+  knotFlash.setAttribute("r", (70 * fS).toFixed(1));
+  // 红色光点：凝现瞬间「啪」地点亮（一次小爆亮），随后急促心跳呼吸，
+  // 绷紧烧亮胀大，断时被冷白闪吞灭
+  const ignite = Math.exp(-Math.max(0, t - .98) / .3) * smooth(.82, 1.0, t);
+  const kHeat = smooth(1.7, BREAK, t) * (1 - broke);
+  const beat = .5 + .5 * Math.sin(t * 7.4 + .4);
+  const coreR = 10 + 3.5 * beat + 5 * kHeat + 9 * fA + 7 * ignite;
+  const haloR = 26 + 10 * beat + 15 * kHeat + 32 * fA + 26 * ignite;
+  knotCore.setAttribute("r", coreR.toFixed(1));
+  knotHalo.setAttribute("r", haloR.toFixed(1));
+  knotRings.setAttribute("opacity", knotOn.toFixed(3));
+
+  /* ---------- 摄影机（机位本身参与叙事：缓推/呼吸/急推/缓拉，
+       全程 scale≥1 只推不拉穿，边缘露出的也是 #root 的黑，无黑框） ---------- */
+  const p = punchAt(t);
+  // 缓推：拖入期稍快，之后持续向她心口逼近
+  const push = 1.02 + .04 * smooth(.0, 6.5, t);
+  // 绷紧期手持呼吸（断扣后 1s 内收手）
+  const handAmp = 1.2 + 2.2 * smooth(1.4, BREAK, t)
+                        * (1 - smooth(BREAK + .5, BREAK + 1, t));
+  const camX = Math.cos(t * .8) * .6 * handAmp;
+  const camY = (Math.sin(t * .9) * .8 + Math.sin(t * 1.7 + 1.3) * .5) * handAmp;
+  // 炸开余震：主震后 1.3s 内高频颤抖指数衰减（世界还在嗡嗡作响），
+  // 叠两次回响重击（.20/.52，与 pc-fx 回响环同拍），方向锁定一击弹回
+  const afterEnv = Math.exp(-Math.max(0, t - .04) / .42) * (1 - smooth(1.3, 1.55, t));
+  const afX = Math.sin(t * 52 + .3) * 2.6 * afterEnv
+            + Math.sin(t * 71 + 1) * 1.3 * afterEnv;
+  const afY = Math.cos(t * 47 + 2) * 2.6 * afterEnv
+            + Math.sin(t * 63) * 1.3 * afterEnv;
+  const echoK = (at) => {
+    const u = t - at;
+    return u < 0 || u > .32 ? 0 : Math.exp(-u / .1);
+  };
+  const ec = echoK(.20) * 5.0 + echoK(.52) * 3.4;
+  const ecX = (t < .20 ? 1 : -1) * ec;
+  const ecY = Math.sin(t * 30) * ec * .55;
+  // 断扣瞬间急推（炸到眼前）再快速回落
+  const rec = wAge >= 0 ? Math.exp(-wAge / .22) * broke : 0;
+  // 碎解起缓拉 + 轻微上浮（与下沉的她形成一丝分离感）
+  const cr = smooth(CRUMBLE_T, D, t);
+  const camScale = (push + .03 * rec) * (1 - .045 * cr);
+  world.style.transformOrigin = "50% 46%";
+  world.style.transform =
+    `translate(${(camX + p.jx + afX + ecX).toFixed(1)}px ${(camY + p.jy + afY + ecY + 5 * rec - 6 * cr).toFixed(1)}px) scale(${camScale.toFixed(4)})`;
+}
+
+const state = { t: 0 };
+tl.to(state, { t: D, duration: D, ease: "none",
+               onUpdate: () => draw(state.t) }, 0);
+draw(0);
+
+</script>
+</body>
+</html>

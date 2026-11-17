@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Pre1 Env — 无钟之塔世界层（53.93-68.37）</title>
+<script src="assets/vendor/gsap.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000; overflow: hidden; }
+  .clip { position: absolute; }
+
+  #root { width: 1920px; height: 1080px; overflow: hidden; background: #04060a; }
+
+  /* S2 仰视钟楼：空黑圆窗在上、尖拱破窗两侧雪光、石栏在下 */
+  #plate {
+    width: 1920px; height: 1080px;
+    left: 0; top: 0;
+    object-fit: cover;
+    transform-origin: 50% 28%;   /* 向空洞钟面缓推 */
+    filter: brightness(.72) saturate(.5) contrast(1.12);
+    will-change: transform, filter, opacity;
+  }
+
+  /* 圆窗后冷光的呼吸（雪云掩月） */
+  #pale-glow {
+    inset: 0;
+    background: radial-gradient(26% 30% at 50% 21%,
+      rgba(168,190,232,.16) 0%, rgba(120,150,200,.05) 55%, rgba(0,0,0,0) 100%);
+    mix-blend-mode: screen;
+  }
+
+  /* 沉沦段（65.4s 雪幕之后）：塔退成残影，空间坠入近黑虚空，
+     交给 c1-env 的下沉虚空无缝接住 */
+  #void {
+    inset: 0;
+    background: radial-gradient(60% 50% at 50% 0%,
+      rgba(20,28,46,.5) 0%, rgba(4,6,10,.96) 70%);
+    opacity: 0;
+  }
+</style>
+</head>
+<body>
+  <div id="root" data-composition-id="pre1-env" data-width="1920" data-height="1080">
+    <img id="plate" class="clip" src="assets/images/tower.png"
+         data-start="0" data-duration="14.44" data-track-index="0"
+         data-layout-allow-overflow alt="">
+    <div id="pale-glow" class="clip"
+         data-start="0" data-duration="14.44" data-track-index="1"
+         data-layout-ignore></div>
+    <div id="void" class="clip"
+         data-start="0" data-duration="14.44" data-track-index="2"
+         data-layout-ignore></div>
+  </div>
+
+<script>
+/* 局部 0-14.44s（全局 53.93-68.37）
+   从 Verse1 压黑中淡入；14.44s 一镜向空钟面缓推；雪光呼吸；
+   11.5s（65.4）雪幕全遮瞬间塔沉为虚空残影，接 Chorus 下沉。 */
+window.__timelines = window.__timelines || {};
+const tl = gsap.timeline({ paused: true });
+window.__timelines["pre1-env"] = tl;
+
+const plate = document.getElementById("plate");
+const glow = document.getElementById("pale-glow");
+const voidEl = document.getElementById("void");
+const D = 14.44;
+
+const clamp01 = v => Math.min(1, Math.max(0, v));
+const smooth = (a, b, x) => { x = clamp01((x - a) / (b - a)); return x * x * (3 - 2 * x); };
+
+function draw(t) {
+  // 入场淡入（Verse1 末已是全黑）
+  const enter = smooth(0, 0.8, t);
+  // 缓推 1.0→1.18：0-9.58 与 pre1-shot1 人物 wrapper 完全同步
+  // （pow 1.15 前段极缓、台阶段略加速），9.58 后维持推幅直到雪幕吞塔
+  const sc = 1.0 + 0.18 * Math.pow(Math.min(t, 9.58) / 9.58, 1.15);
+  plate.style.transform = `scale(${sc.toFixed(4)})`;
+  // 雪云呼吸 ±6%
+  const breath = 0.88 + 0.12 * Math.sin(t * 0.55) * Math.sin(t * 0.23 + 1.1);
+  plate.style.filter =
+    `brightness(${(0.72 * breath).toFixed(3)}) saturate(.5) contrast(1.12)`;
+  glow.style.opacity = (0.7 + 0.3 * Math.sin(t * 0.5)) * enter;
+  // 雪幕吞塔（11.5-12.15s）
+  const swallow = smooth(11.5, 12.15, t);
+  plate.style.opacity = (enter * (1 - swallow * 0.9)).toFixed(3);
+  voidEl.style.opacity = swallow.toFixed(3);
+}
+
+const state = { t: 0 };
+tl.to(state, { t: D, duration: D, ease: "none",
+               onUpdate: () => draw(state.t) }, 0);
+draw(0);
+</script>
+</body>
+</html>

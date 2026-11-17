@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Chorus1 Shot1 — 咲いて黒薔薇よ 運命を裂いて (68.37-72.68)</title>
+<script src="assets/vendor/gsap.min.js"></script>
+<script src="assets/vendor/audio-events.js"></script>
+<script src="assets/vendor/audio-rig.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: transparent; overflow: hidden; }
+  .clip { position: absolute; }
+  #root { width: 1920px; height: 1080px; overflow: hidden; }
+
+  .actor { position: absolute; will-change: opacity, transform, filter; }
+  .actor img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: contain;
+  }
+  .sil { filter: brightness(.13) saturate(.25) contrast(1.5); }
+  .rim { mix-blend-mode: screen; }
+
+  /* A6 仰卧沉沦（跨镜统一基准盒 660×880 / left625） */
+  #sinker { width: 660px; height: 880px; left: 625px; }
+
+  /* P2 黑蔷薇：副歌保留暗红本色（不走纯黑剪影），从她抱于胸前的双手间绽开 */
+  #bloom {
+    width: 520px; height: 620px;
+    left: 645px; top: 250px;
+    opacity: 0;
+  }
+  .blood { filter: brightness(.6) saturate(1.75) contrast(1.3) hue-rotate(-6deg); }
+
+  /* 花头红芯：绽开瞬间的金红光核（花头中心屏 880,410） */
+  #flower-core {
+    width: 220px; height: 220px;
+    left: 795px; top: 300px;
+    border-radius: 50%;
+    background: radial-gradient(circle,
+      rgba(255,120,70,.75) 0%, rgba(190,24,30,.35) 45%, rgba(0,0,0,0) 100%);
+    mix-blend-mode: screen;
+    opacity: 0;
+  }
+  /* 花冠外的暗红晕（下沉深渊里唯一绽放的红） */
+  #flower-halo {
+    width: 640px; height: 640px;
+    left: 585px; top: 90px;
+    border-radius: 50%;
+    background: radial-gradient(circle,
+      rgba(150,18,30,.18) 0%, rgba(0,0,0,0) 66%);
+    mix-blend-mode: screen;
+    opacity: 0;
+  }
+</style>
+</head>
+<body>
+  <div id="root" data-composition-id="c1-shot1" data-width="1920" data-height="1080">
+    <div id="world" class="clip"
+         data-start="0" data-duration="4.31" data-track-index="0"
+         data-layout-ignore>
+
+      <div id="sinker" class="clip actor"
+           data-start="0" data-duration="4.31" data-track-index="1">
+        <!-- 她已在 68.37 白闪前于 pre1-shot2 完成 A6→A6b 撒手慢换，这里直接是 bloom 版 -->
+        <img class="sil" src="assets/images/girl-sinking-bloom.png" alt="">
+        <img class="rim" id="rimL" src="assets/rim/girl-sinking-bloom-rimL.png" alt="">
+        <img class="rim" id="rimR" src="assets/rim/girl-sinking-bloom-rimR.png" alt="">
+      </div>
+
+      <div id="flower-halo" class="clip"
+           data-start="0" data-duration="4.31" data-track-index="2"
+           data-layout-ignore data-layout-allow-overflow></div>
+      <div id="bloom" class="clip actor"
+           data-start="0" data-duration="4.31" data-track-index="3"
+           data-layout-allow-overflow>
+        <img class="blood" src="assets/images/rose-bloom.png" alt="">
+      </div>
+      <div id="flower-core" class="clip"
+           data-start="0" data-duration="4.31" data-track-index="4"
+           data-layout-ignore data-layout-allow-overflow></div>
+    </div>
+  </div>
+
+<script>
+/* 局部 0-4.31s（全局 68.37-72.68）
+   副歌爆发（fx 层红白爆闪）中，她持续下沉，黑蔷薇自她交抱的双手间
+   反向绽开——她向下、花向上，命运在此被撕开。
+   0.35 绽开（咲いて），2.13s 二次撕裂脉冲（裂いて≈70.5s）。
+   A6 位置严格沿用全局公式 top=40+(tg-65.7)*8。 */
+window.__timelines = window.__timelines || {};
+const tl = gsap.timeline({ paused: true });
+window.__timelines["c1-shot1"] = tl;
+
+const world = document.getElementById("world");
+const sinker = document.getElementById("sinker");
+const rimL = document.getElementById("rimL");
+const rimR = document.getElementById("rimR");
+const bloom = document.getElementById("bloom");
+const core = document.getElementById("flower-core");
+const halo = document.getElementById("flower-halo");
+const _ar = window.AudioRig;
+const D = 4.31;
+
+const PUNCHES = [
+  { t: 0.0,  amp: 11, dur: .55 },
+  { t: 2.13, amp: 7,  dur: .4 }
+];
+const clamp01 = v => Math.min(1, Math.max(0, v));
+const smooth = (a, b, x) => { x = clamp01((x - a) / (b - a)); return x * x * (3 - 2 * x); };
+const decay = x => x <= 0 ? 0 : Math.exp(-x * 5.2);
+
+function punchAt(t) {
+  let jx = 0, jy = 0;
+  for (const p of PUNCHES) {
+    const u = (t - p.t) / p.dur;
+    if (u < 0 || u > 1) continue;
+    const e = decay(u);
+    jx += Math.sin(t * 97 + p.t * 13) * p.amp * e;
+    jy += Math.cos(t * 113 + p.t * 7) * p.amp * e;
+  }
+  return { jx, jy };
+}
+
+function draw(t) {
+  const tg = 68.37 + t;
+  // 她下沉（跨镜统一公式）
+  const top = 90 + (tg - 65.7) * 7;
+  const rot = -6 - 1.5 * smooth(0, D, t);
+  const ap = smooth(0, .45, t);
+  sinker.style.transform =
+    `translateY(${top.toFixed(1)}px) rotate(${rot.toFixed(2)}deg)`;
+  sinker.style.opacity = ap.toFixed(3);
+  rimL.style.opacity = (0.6 * ap).toFixed(3);
+  rimR.style.opacity = (0.38 * ap).toFixed(3);
+
+  // 黑蔷薇：白爆中花一出现（t=0）就立刻开始砸大——build-up 鼓组密且烈，
+  // 每一拍都是一级台阶吸附 + overshoot 回弹，台阶间随音墙高频微颤；
+  // 最终 scale 2.15（盒面 520×620 → 1118×1333）占住屏幕中央绝大部分。
+  // 72.18（局部 3.81）真空：先一刹绷紧预张、随即被死寂整体抽走（pc-fx 接管）。
+  const appear = smooth(.0, .22, t);
+  // 十三级台阶：真实鼓点（全局 68.44…71.72）局部时刻 / 目标 scale
+  const STEPS = [
+    [.07, .68], [.35, .78], [.49, .92], [.89, 1.10], [1.17, 1.19],
+    [1.31, 1.33], [1.71, 1.49], [1.99, 1.57], [2.25, 1.70], [2.65, 1.82],
+    [3.07, 2.00], [3.21, 2.08], [3.35, 2.15]
+  ];
+  // 每拍力度（来自 onset strength 归一）驱动回弹幅度
+  const HITS = [
+    [.07,.72],[.35,.39],[.49,.55],[.89,.87],[1.17,.43],[1.31,.56],
+    [1.71,.66],[1.99,.47],[2.25,.58],[2.65,.55],[3.07,.63],[3.21,.42],[3.35,.42]
+  ];
+  let sc = .55, prev = .55, kick = 0, hop = 0;
+  for (let i = 0; i < STEPS.length; i++) {
+    const pt = STEPS[i][0], lv = STEPS[i][1], s = HITS[i][1];
+    sc += (lv - prev) * smooth(pt, pt + .09, t);
+    prev = lv;
+    // 砸下瞬间 overshoot（宽 .06s 快峰），强拍回弹更大
+    kick += .075 * s * Math.exp(-Math.pow((t - pt - .035) / .055, 2));
+    // 花体随拍小跳（先被砸沉、再弹起）
+    hop += 11 * s * Math.exp(-Math.pow((t - pt - .05) / .09, 2));
+  }
+  // 裂いて 二次脉冲（70.5）：额外一挣
+  const tear = Math.exp(-Math.pow((t - 2.13) / .24, 2)) * .13;
+  // 音墙高频微颤（真实鼓包络门控，安静真空自然归零）
+  let buzz = 0;
+  if (_ar) {
+    buzz = _ar.hits(68.37 + t, { band: 2, minS: .30, half: .07, win: .22 });
+  }
+  const trem = .012 * Math.sin(t * 23) + .018 * buzz * Math.sin(t * 31 + 1.3);
+
+  // 真空崩解：3.72 起一刹绷紧预张（花体反胀抖动），3.81 被死寂急缩抽走
+  const brace = smooth(3.70, 3.81, t) * (1 - smooth(3.81, 3.95, t));
+  const crack = smooth(3.81, 3.94, t);
+  const gone = smooth(3.94, 4.10, t);
+  const suck = 1 - .90 * crack;                       // 急缩到 10%
+  const preTear = brace * (.05 * Math.sin(t * 60) + .03);
+  let finalSc = (sc + kick + trem + tear + preTear) * appear * suck;
+  const blur = 13 * crack;
+  const bri = .6 - .34 * crack;
+  const sat = 1.75 - .9 * crack;
+
+  const fy = 250 - 40 * smooth(.2, 3.6, t);          // 放大同时花心归位屏心
+  const fRot = (.55 * buzz * Math.sin(t * 17 + .5)
+               + 1.1 * brace * Math.sin(t * 47)).toFixed(2);
+  bloom.style.transform =
+    `translateY(${(fy - 250 - hop).toFixed(1)}px) rotate(${fRot}deg) scale(${finalSc.toFixed(3)})`;
+  bloom.style.filter =
+    `brightness(${bri.toFixed(2)}) saturate(${sat.toFixed(2)}) contrast(1.3) hue-rotate(-6deg) blur(${blur.toFixed(1)}px)`;
+  bloom.style.opacity = (appear * (1 - gone)).toFixed(3);
+
+  // 花芯：随花一同放大搏动；真空一到瞬间坍缩熄灭
+  const coreLive = (1 - smooth(3.81, 3.92, t));
+  const corePulse = appear * coreLive * (.75 + .25 * Math.sin(t * 3.4))
+                    * (1 + .5 * buzz) + tear * 2.0;
+  core.style.transform =
+    `translateY(${(fy - 250 - hop).toFixed(1)}px) scale(${(finalSc * .92).toFixed(3)})`;
+  core.style.opacity = Math.min(1, corePulse).toFixed(3);
+  // 暗红晕：随花放大；崩解瞬间外释涨红一拍，再随真空沉下去
+  const haloRelease = smooth(3.81, 3.98, t) * (1 - smooth(4.02, 4.31, t));
+  halo.style.opacity = (appear * .55 + tear * 1.6) * (1 - crack)
+                       + .62 * haloRelease;
+  halo.style.transform =
+    `translateY(${(fy - 250).toFixed(1)}px) scale(${(finalSc * 1.15 + .25 * haloRelease).toFixed(3)})`;
+
+  // 镜头颤：手工 punch（白爆/撕裂）+ 真实鼓点一击弹回（build-up 鼓全在 b=2，
+  // 量程给足 13px + 高频抖；72.18 真空无起音，震动自然急停——这一停本身就是冲击）
+  const p = punchAt(t);
+  let ax = 0, ay = 0;
+  if (_ar) {
+    const sh = _ar.shake(68.37 + t, { band: 2, minS: .32, half: .06, win: .22 });
+    ax = sh.x * 13.0 * sh.amp;
+    ay = sh.y * 13.0 * sh.amp;
+  }
+  const jx = ax + buzz * 2.4 * Math.sin(t * 41);
+  const jy = ay + buzz * 2.4 * Math.cos(t * 37 + 2);
+  world.style.transform = `translate(${(p.jx + jx).toFixed(1)}px, ${(p.jy + jy).toFixed(1)}px)`;
+}
+
+const state = { t: 0 };
+tl.to(state, { t: D, duration: D, ease: "none",
+               onUpdate: () => draw(state.t) }, 0);
+draw(0);
+</script>
+</body>
+</html>

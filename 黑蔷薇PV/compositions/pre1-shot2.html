@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Pre1 Shot2 — 凍る誓いを唇に → 沉沦 (63.51-68.37)</title>
+<script src="assets/vendor/gsap.min.js"></script>
+<script src="assets/vendor/audio-events.js"></script>
+<script src="assets/vendor/audio-rig.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: transparent; overflow: hidden; }
+  .clip { position: absolute; }
+  #root { width: 1920px; height: 1080px; overflow: hidden; }
+
+  .actor { position: absolute; will-change: opacity, transform; }
+  .actor img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: contain;
+  }
+  .sil { filter: brightness(.13) saturate(.22) contrast(1.5); }
+  .rim { mix-blend-mode: screen; }
+
+  /* 近景虚背景：近黑实底盖掉塔（切点藏在 63.51 雪幕后），冷光从她脸侧上方来 */
+  #void-bg {
+    inset: 0;
+    background:
+      radial-gradient(42% 30% at 62% -8%, rgba(120,146,200,.16) 0%, rgba(0,0,0,0) 62%),
+      #03040a;
+  }
+
+  /* A2 仰头胸像近景（singing 图，比 .75）：脸在屏上半部，盒底出屏。
+     原图张口中心 990,490 → 屏 990,300（s=.716, left280 top-51） */
+  #girl-face {
+    width: 1100px; height: 1467px;
+    left: 280px; top: -51px;
+  }
+  /* 面部冷反光：让近景剪影里有暗部体积（光心对准她仰起的脸 880,280） */
+  #face-cold {
+    inset: 0;
+    background: radial-gradient(30% 36% at 46% 26%,
+      rgba(150,175,222,.32) 0%, rgba(120,145,200,.1) 48%, rgba(0,0,0,0) 74%);
+    mix-blend-mode: screen;
+    opacity: 0;
+  }
+  /* 唇齿间一点冻住的冷光（张口中心屏 990,300） */
+  #frost-lip {
+    width: 28px; height: 16px;
+    left: 976px; top: 292px;
+    border-radius: 50%;
+    background: radial-gradient(circle,
+      rgba(210,228,255,.8) 0%, rgba(150,180,230,.2) 60%, rgba(0,0,0,0) 100%);
+    mix-blend-mode: screen;
+    opacity: 0;
+  }
+
+  /* A6 仰卧沉沦（图比 .75），跨镜统一基准盒 660×880 / left625 */
+  #sinker {
+    width: 660px; height: 880px;
+    left: 625px;
+    opacity: 0;
+  }
+</style>
+</head>
+<body>
+  <div id="root" data-composition-id="pre1-shot2" data-width="1920" data-height="1080">
+    <div id="void-bg" class="clip"
+         data-start="0" data-duration="4.86" data-track-index="0"
+         data-layout-ignore></div>
+
+    <div id="girl-face" class="clip actor"
+         data-start="0" data-duration="4.86" data-track-index="1">
+      <img class="sil" src="assets/images/girl-singing.png" alt="">
+      <img class="rim" id="face-rimL" src="assets/rim/girl-singing-rimL.png" alt="">
+      <img class="rim" id="face-rimR" src="assets/rim/girl-singing-rimR.png" alt="">
+    </div>
+    <div id="face-cold" class="clip"
+         data-start="0" data-duration="4.86" data-track-index="5"
+         data-layout-ignore></div>
+    <div id="frost-lip" class="clip"
+         data-start="0" data-duration="4.86" data-track-index="2"
+         data-layout-ignore></div>
+
+    <div id="sinker" class="clip actor"
+         data-start="0" data-duration="4.86" data-track-index="3">
+      <!-- A6 抱胸版垫底恒显；A6b 撒手版在 67s 鼓组 build-up 中慢淡入（白闪前换完） -->
+      <img class="sil" id="sink-sil" src="assets/images/girl-sinking.png" alt="">
+      <img class="sil" id="sink-sil-bloom" src="assets/images/girl-sinking-bloom.png"
+           alt="" style="opacity:0">
+      <img class="rim" id="sink-rimL" src="assets/rim/girl-sinking-rimL.png" alt="">
+      <img class="rim" id="sink-rimR" src="assets/rim/girl-sinking-rimR.png" alt="">
+      <img class="rim" id="sink-rimL-bloom" src="assets/rim/girl-sinking-bloom-rimL.png"
+           alt="" style="opacity:0">
+      <img class="rim" id="sink-rimR-bloom" src="assets/rim/girl-sinking-bloom-rimR.png"
+           alt="" style="opacity:0">
+    </div>
+
+    <canvas id="breath" class="clip" width="1920" height="1080"
+            data-start="0" data-duration="4.86" data-track-index="4"
+            data-layout-ignore></canvas>
+  </div>
+
+<script>
+/* 局部 0-4.86s（全局 63.51-68.37）
+   0.0-1.5  侧面近景：冻誓在唇，两缕白息；
+   1.49 起她向后失支撑（65.45 雪幕全遮由 fx 层完成）；
+   2.19 雪幕退去时已是 A6 仰卧姿态，自塔之高度向黑暗深处缓沉，
+        位置/速度与 c1-shot1、c1-shot2 共用同一条全局下沉公式：
+        top = 40 + (tg-65.7)*8，rotation -3°→-6°。 */
+window.__timelines = window.__timelines || {};
+const tl = gsap.timeline({ paused: true });
+window.__timelines["pre1-shot2"] = tl;
+
+const face = document.getElementById("girl-face");
+const faceRimL = document.getElementById("face-rimL");
+const faceRimR = document.getElementById("face-rimR");
+const faceCold = document.getElementById("face-cold");
+const lip = document.getElementById("frost-lip");
+const sinker = document.getElementById("sinker");
+const sinkSilBloom = document.getElementById("sink-sil-bloom");
+const sinkRimL = document.getElementById("sink-rimL");
+const sinkRimR = document.getElementById("sink-rimR");
+const sinkRimLB = document.getElementById("sink-rimL-bloom");
+const sinkRimRB = document.getElementById("sink-rimR-bloom");
+const _ar = window.AudioRig;
+const cvs = document.getElementById("breath");
+const ctx = cvs.getContext("2d");
+const D = 4.86;
+const TG0 = 63.51;   // 本镜全局起点
+
+const clamp01 = v => Math.min(1, Math.max(0, v));
+const smooth = (a, b, x) => { x = clamp01((x - a) / (b - a)); return x * x * (3 - 2 * x); };
+
+// 两缕白息的出生时刻（局部秒）
+const BREATHS = [0.32, 1.42];
+// 张口的屏幕位置（白息起点）
+const LIP = { x: 990, y: 300 };
+
+function drawBreath(t) {
+  ctx.clearRect(0, 0, 1920, 1080);
+  for (const b0 of BREATHS) {
+    const u = (t - b0) / 1.35;            // 生命 1.35s
+    if (u <= 0 || u >= 1) continue;
+    const rise = u * 120;
+    const drift = Math.sin(u * Math.PI) * 14;
+    const a = Math.sin(u * Math.PI) * 0.22;
+    const r = 10 + u * 26;
+    const x = LIP.x + drift;
+    const y = LIP.y - rise;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, `rgba(214,228,255,${a.toFixed(3)})`);
+    g.addColorStop(1, "rgba(214,228,255,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function draw(t) {
+  drawBreath(t);
+
+  // ----- A1 近景段 -----
+  const enter = smooth(0.05, 0.55, t);
+  const fall = smooth(1.49, 1.98, t);    // 后倾并在雪幕中消失
+  const fy = fall * 26;
+  const fsc = 1 + fall * 0.045;
+  face.style.transform = `translateY(${fy.toFixed(1)}px) scale(${fsc.toFixed(3)})`;
+  face.style.opacity = (enter * (1 - fall)).toFixed(3);
+  faceRimR.style.opacity = (0.88 * enter * (1 - fall)).toFixed(3);
+  faceRimL.style.opacity = (0.3 * enter * (1 - fall)).toFixed(3);
+  faceCold.style.opacity = (enter * (1 - fall)).toFixed(3);
+  lip.style.opacity = (0.55 + 0.3 * Math.sin(t * 3.1)) * enter * (1 - fall) >= 0
+    ? Math.min(0.85, (0.55 + 0.3 * Math.sin(t * 3.1)) * enter * (1 - fall)).toFixed(3)
+    : 0;
+
+  // ----- A6 沉沦段（全局下沉公式，跨镜统一：90 + (tg-65.7)*7）-----
+  const tg = TG0 + t;
+  const top = 90 + Math.max(0, tg - 65.7) * 7;
+  const rot = -3 - 3 * smooth(65.7, 68.37, tg);
+  const ap = smooth(2.19, 2.75, t);
+
+  // A6→A6b 慢换：局部 3.49（全局 67.0）鼓组 build-up 起在渐密鼓点中撒手，
+  // 4.78（68.29）换完，68.37 白爆闪收尾。旧版垫底恒显、新版上层淡入，rim 交叉。
+  const bloomK = smooth(3.49, 4.78, t);
+  sinkSilBloom.style.opacity = (ap * bloomK).toFixed(3);
+  sinkRimL.style.opacity = (0.62 * ap * (1 - bloomK)).toFixed(3);
+  sinkRimR.style.opacity = (0.40 * ap * (1 - bloomK)).toFixed(3);
+  sinkRimLB.style.opacity = (0.62 * ap * bloomK).toFixed(3);
+  sinkRimRB.style.opacity = (0.40 * ap * bloomK).toFixed(3);
+
+  // build-up 鼓组砸出来的微颤：66.7 前近乎静止，之后随低鼓/织体起音渐强，
+  // 一击弹回（方向按起音锁定）叠一点持续细密抖动。
+  const gate = smooth(3.19, 4.45, t);
+  let jx = 0, jy = 0;
+  if (gate > 0 && _ar) {
+    // build-up 的重击全在 b=2（踩准每拍），量程给足
+    const sh = _ar.shake(tg, { band: 2, minS: .34, half: .08, win: .3 });
+    const drum = _ar.hits(tg, { band: 2, minS: .34, half: .06, win: .22 });
+    const amp = gate * (9.0 * sh.amp + 2.6 * Math.min(1, drum));
+    jx = sh.x * amp;
+    jy = sh.y * amp;
+  }
+  sinker.style.transform =
+    `translate(${jx.toFixed(2)}px,${(top + jy).toFixed(1)}px) rotate(${rot.toFixed(2)}deg)`;
+  sinker.style.opacity = ap.toFixed(3);
+}
+
+const state = { t: 0 };
+tl.to(state, { t: D, duration: D, ease: "none",
+               onUpdate: () => draw(state.t) }, 0);
+draw(0);
+</script>
+</body>
+</html>

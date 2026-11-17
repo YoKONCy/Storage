@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Lyrics — 全曲歌詞字幕軌（日主中輔・繁體譯詞）</title>
+<script src="assets/vendor/gsap.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: transparent; overflow: hidden; }
+
+  /* 日文襯線：優先 Windows 游明朝，逐級回退到明朝系與宋體 */
+  @font-face { font-family: 'PV-Mincho'; src: local('Yu Mincho'), local('游明朝'),
+               local('YuMincho'), local('MS Mincho'), local('SimSun'); }
+  /* 繁中輔詞用楷體：標楷體（DFKai-SB）→ 簡體環境楷體 → 宋體兜底，
+     楷體的手寫經文感與日文明朝的「刻印感」形成主輔層次 */
+  @font-face { font-family: 'PV-Kai'; src: local('DFKai-SB'), local('標楷體'),
+               local('KaiTi'), local('STKaiti'), local('SimSun'); }
+
+  #root {
+    width: 1920px;
+    height: 1080px;
+    background: transparent;
+  }
+
+  /* 字幕安全區：雙行後略下移，避開全局暗角最深處 */
+  #lyric-layer {
+    position: absolute;
+    left: 0; right: 0;
+    bottom: 130px;
+    text-align: center;
+  }
+
+  .lyric {
+    position: absolute;
+    left: 0; right: 0;
+    visibility: hidden; /* GSAP autoAlpha 接管，seek 前不可見 */
+    will-change: opacity, transform;
+  }
+
+  /* 日文主詞：明朝・大號・冷白，承擔歌詞主視覺 */
+  .ja {
+    display: block;
+    font-family: 'PV-Mincho', serif;
+    font-size: 47px;
+    letter-spacing: 7px;
+    text-indent: 7px; /* 補償字間距導致的視覺偏心 */
+    color: rgba(226, 230, 240, 0.96);
+    text-shadow:
+      0 2px 22px rgba(0,0,0,.95),
+      0 0 6px rgba(0,0,0,.9);
+  }
+
+  /* 繁中輔詞：楷體・小號・銀灰半透，行距拉開，弱於日文但同屬冷色體系 */
+  .zh {
+    display: block;
+    margin-top: 11px;
+    font-family: 'PV-Kai', serif;
+    font-size: 25px;
+    letter-spacing: 6px;
+    text-indent: 6px;
+    color: rgba(192, 197, 216, 0.60);
+    text-shadow:
+      0 1px 14px rgba(0,0,0,.9);
+  }
+</style>
+</head>
+<body>
+  <div id="root"
+       data-composition-id="lyrics"
+       data-width="1920"
+       data-height="1080">
+
+    <div id="lyric-layer"
+         class="clip" data-start="0" data-duration="242.1" data-track-index="5">
+      <!-- 每句持續到下一句開始；末句到 219.5（器樂尾奏留白）。
+           ja=日文主詞，zh=繁體輔譯，兩行同進退。 -->
+      <div class="lyric clip" data-start="38.05"  data-duration="4.31"  data-layout-allow-occlusion><span class="ja" data-layout-allow-occlusion>硝子の薔薇を　手のひらに抱いて</span><span class="zh" data-layout-allow-occlusion>將玻璃薔薇　輕捧於掌心</span></div>
+      <div class="lyric clip" data-start="42.36"  data-duration="3.75"  data-layout-allow-occlusion><span class="ja" data-layout-allow-occlusion>白い肖像が　夜明けを拒む</span><span class="zh" data-layout-allow-occlusion>白色的肖像　拒絕黎明</span></div>
+      <div class="lyric clip" data-start="46.11"  data-duration="5.11"  data-layout-allow-occlusion><span class="ja" data-layout-allow-occlusion>あなたの名前　古書に封じて</span><span class="zh" data-layout-allow-occlusion>你的名字　封入古書</span></div>
+      <div class="lyric clip" data-start="51.22"  data-duration="2.71"  data-layout-allow-occlusion><span class="ja" data-layout-allow-occlusion>ほどけたリボンを　棺に結ぶ</span><span class="zh" data-layout-allow-occlusion>將鬆開的緞帶　繫於棺上</span></div>
+
+      <div class="lyric clip" data-start="53.93"  data-duration="9.58"  data-layout-allow-occlusion><span class="ja" data-layout-allow-occlusion>鐘のない塔に　ひとり立ち</span><span class="zh" data-layout-allow-occlusion>獨自立於　無鐘之塔</span></div>
+      <div class="lyric clip" data-start="63.51"  data-duration="4.86"  data-layout-allow-occlusion><span class="ja" data-layout-allow-occlusion>凍る誓いを　唇に</span><span class="zh" data-layout-allow-occlusion>凍結的誓約　凝在唇邊</span></div>
+
+      <div class="lyric clip" data-start="68.37"  data-duration="4.31"  data-layout-allow-occlusion><span class="ja" data-layout-allow-occlusion>咲いて　黒薔薇よ　運命を裂いて</span><span class="zh" data-layout-allow-occlusion>綻放吧黑薔薇　將命運撕裂</span></div>
+      <div class="lyric clip" data-start="72.68"  data-duration="8.78"  data-layout-allow-occlusion><span class="ja" data-layout-allow-occlusion>この胸の檻を　気高く砕いて</span><span class="zh" data-layout-allow-occlusion>高傲地粉碎　這胸中牢籠</span></div>
+      <div class="lyric clip" data-start="81.46"  data-duration="4.31"  data-layout-allow-occlusion><span class="ja" data-layout-allow-occlusion>あなたへ捧ぐ　最後の祈り</span><span class="zh" data-layout-allow-occlusion>獻給你　最後的祈禱</span></div>
+      <div class="lyric clip" data-start="85.77"  data-duration="21.51" data-layout-allow-occlusion><span class="ja" data-layout-allow-occlusion>滅びの庭で　私は歌う</span><span class="zh" data-layout-allow-occlusion>在毀滅之庭　我放聲歌唱</span></div>
+
+      <div class="lyric clip" data-start="107.63" data-duration="2.95"  data-layout-allow-occlusion><span class="ja" data-layout-allow-occlusion>銀の燭台　蝋が垂れて</span><span class="zh" data-layout-allow-occlusion>銀色燭台　蠟淚滴落</span></div>
+      <div class="lyric clip" data-start="110.58" data-duration="6.14"  data-layout-allow-occlusion><span class="ja" data-layout-allow-occlusion>古い舞踏会　幕を閉じる</span><span class="zh" data-layout-allow-occlusion>古老的舞會　降下帷幕</span></div>
+      <div class="lyric clip" data-start="116.72" data-duration="3.59"  data-layout-allow-occlusion><span class="ja" data-layout-allow-occlusion>あなたの面影　鏡に映せば</span><span class="zh" data-layout-allow-occlusion>你的面影　若映於鏡中</span></div>
+      <div class="lyric clip" data-start="120.31" data-duration="4.79"  data-layout-allow-occlusion><span class="ja" data-layout-allow-occlusion>遠い微笑みが　刃に変わる</span><span class="zh" data-layout-allow-occlusion>遙遠的微笑　化作利刃</span></div>
+
+      <div class="lyric clip" data-start="125.10" data-duration="5.75"  data-layout-allow-occlusion><span class="ja" data-layout-allow-occlusion>赤い月影　頬を染め</span><span class="zh" data-layout-allow-occlusion>緋紅月影　暈染雙頰</span></div>
+      <div class="lyric clip" data-start="130.85" data-duration="10.93" data-layout-allow-occlusion><span class="ja" data-layout-allow-occlusion>許しの言葉は　灰となる</span><span class="zh" data-layout-allow-occlusion>寬恕的話語　終成灰燼</span></div>
+
+      <div class="lyric clip" data-start="141.78" data-duration="4.31"  data-layout-allow-occlusion><span class="ja" data-layout-allow-occlusion>咲いて　黒薔薇よ　運命を裂いて</span><span class="zh" data-layout-allow-occlusion>綻放吧黑薔薇　將命運撕裂</span></div>
+      <div class="lyric clip" data-start="146.09" data-duration="4.62"  data-layout-allow-occlusion><span class="ja" data-layout-allow-occlusion>この胸の檻を　気高く砕いて</span><span class="zh" data-layout-allow-occlusion>高傲地粉碎　這胸中牢籠</span></div>
+      <div class="lyric clip" data-start="150.71" data-duration="3.99"  data-layout-allow-occlusion><span class="ja" data-layout-allow-occlusion>あなたへ捧ぐ　最後の祈り</span><span class="zh" data-layout-allow-occlusion>獻給你　最後的祈禱</span></div>
+      <div class="lyric clip" data-start="154.70" data-duration="21.31" data-layout-allow-occlusion><span class="ja" data-layout-allow-occlusion>滅びの庭で　私は歌う</span><span class="zh" data-layout-allow-occlusion>在毀滅之庭　我放聲歌唱</span></div>
+
+      <div class="lyric clip" data-start="176.01" data-duration="4.46"  data-layout-allow-occlusion><span class="ja" data-layout-allow-occlusion>ああ　羽ばたけ　閉ざされた魂</span><span class="zh" data-layout-allow-occlusion>啊啊　展翅吧　被禁錮的靈魂</span></div>
+      <div class="lyric clip" data-start="180.47" data-duration="4.23"  data-layout-allow-occlusion><span class="ja" data-layout-allow-occlusion>高く　高く　天蓋を越えて</span><span class="zh" data-layout-allow-occlusion>高飛吧　越過天穹</span></div>
+      <div class="lyric clip" data-start="184.70" data-duration="5.11"  data-layout-allow-occlusion><span class="ja" data-layout-allow-occlusion>涙の真珠を　祭壇に置き</span><span class="zh" data-layout-allow-occlusion>將淚的珍珠　置於祭壇</span></div>
+      <div class="lyric clip" data-start="189.81" data-duration="9.65"  data-layout-allow-occlusion><span class="ja" data-layout-allow-occlusion>あなたの名を　永遠に呼ぶ</span><span class="zh" data-layout-allow-occlusion>永遠呼喚　你的名諱</span></div>
+
+      <div class="lyric clip" data-start="199.46" data-duration="4.31"  data-layout-allow-occlusion><span class="ja" data-layout-allow-occlusion>咲いて　黒薔薇よ　運命を裂いて</span><span class="zh" data-layout-allow-occlusion>綻放吧黑薔薇　將命運撕裂</span></div>
+      <div class="lyric clip" data-start="203.77" data-duration="4.23"  data-layout-allow-occlusion><span class="ja" data-layout-allow-occlusion>この胸の檻を　気高く砕いて</span><span class="zh" data-layout-allow-occlusion>高傲地粉碎　這胸中牢籠</span></div>
+      <div class="lyric clip" data-start="208.00" data-duration="4.23"  data-layout-allow-occlusion><span class="ja" data-layout-allow-occlusion>あなたへ捧ぐ　最後の祈り</span><span class="zh" data-layout-allow-occlusion>獻給你　最後的祈禱</span></div>
+      <div class="lyric clip" data-start="212.23" data-duration="7.27"  data-layout-allow-occlusion><span class="ja" data-layout-allow-occlusion>滅びの庭で　私は歌う</span><span class="zh" data-layout-allow-occlusion>在毀滅之庭　我放聲歌唱</span></div>
+    </div>
+  </div>
+
+<script>
+/* 字幕軌：內部時間 = 全局時間（根合成 start=0 掛載）。
+   每句：0.45s 淡入上浮 → 保持 → 句尾前 0.5s 淡出（日文/繁中整組同進退）。
+   全部由暫停時間軸驅動，渲染器 seek 任意幀狀態確定。 */
+window.__timelines = window.__timelines || {};
+const tl = gsap.timeline({ paused: true });
+window.__timelines["lyrics"] = tl;
+
+document.querySelectorAll(".lyric").forEach((el) => {
+  const start = parseFloat(el.dataset.start);
+  const dur = parseFloat(el.dataset.duration);
+  // 初始隱藏（時間軸未播放時也要保持）
+  gsap.set(el, { autoAlpha: 0, y: 12 });
+  tl.to(el, { autoAlpha: 1, y: 0, duration: 0.45, ease: "power2.out" }, start)
+    .to(el, { autoAlpha: 0, duration: 0.5, ease: "power1.in" }, start + dur - 0.5);
+});
+</script>
+</body>
+</html>

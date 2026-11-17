@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Pre1 Shot1 — 鐘のない塔に ひとり立ち (53.93-63.51)</title>
+<script src="assets/vendor/gsap.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: transparent; overflow: hidden; }
+  .clip { position: absolute; }
+  #root { width: 1920px; height: 1080px; overflow: hidden; }
+
+  .actor { position: absolute; will-change: opacity, transform; }
+  .actor img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: contain;
+  }
+  .sil { filter: brightness(.12) saturate(.22) contrast(1.5); }
+  .rim { mix-blend-mode: screen; }
+
+  /* 与 env 同步缓推的世界容器 */
+  #world { inset: 0; transform-origin: 50% 28%; will-change: transform; }
+
+  /* A5 背影：立于石栏前，望向空洞钟面。比例 1360:2048=.664 */
+  #girl {
+    width: 480px; height: 723px;
+    left: 720px; top: 297px;   /* 赤足落在 1020 栏前地面 */
+  }
+
+  /* 塔段空气层：微雪 / 冷光回应 / 虚空凝视（track2 在人之上，近景空气雪） */
+  #fx { position: absolute; inset: 0; }
+</style>
+</head>
+<body>
+  <div id="root" data-composition-id="pre1-shot1" data-width="1920" data-height="1080">
+    <div id="world" class="clip"
+         data-start="0" data-duration="9.58" data-track-index="0"
+         data-layout-ignore>
+      <div id="girl" class="clip actor"
+           data-start="0" data-duration="9.58" data-track-index="1">
+        <img class="sil" src="assets/images/girl-back.png" alt="">
+        <img class="rim" id="rimL" src="assets/rim/girl-back-rimL.png" alt="">
+        <img class="rim" id="rimR" src="assets/rim/girl-back-rimR.png" alt="">
+      </div>
+    </div>
+    <canvas id="fx" class="clip" width="1920" height="1080"
+            data-start="0" data-duration="9.58" data-track-index="2"
+            data-layout-ignore></canvas>
+  </div>
+
+<script>
+/* 局部 0-9.58s（全局 53.93-63.51）
+   她独自立在无钟之塔，几乎静止的守望镜头：
+   轮廓自黑中凝出，两侧破窗的雪光给双侧 rim，发梢随穿堂风极轻地摆；
+   镜头持续推近空钟面（1.0→1.18，与 env plate 同一条曲线），
+   圆窗洒下体积光柱、三层飘雪、冷光六连回应。结尾雪幕转场她溶出。 */
+window.__timelines = window.__timelines || {};
+const tl = gsap.timeline({ paused: true });
+window.__timelines["pre1-shot1"] = tl;
+
+const world = document.getElementById("world");
+const girl = document.getElementById("girl");
+const rimL = document.getElementById("rimL");
+const rimR = document.getElementById("rimR");
+const D = 9.58;
+
+const clamp01 = v => Math.min(1, Math.max(0, v));
+const smooth = (a, b, x) => { x = clamp01((x - a) / (b - a)); return x * x * (3 - 2 * x); };
+function mulberry32(seed) {
+  return function () {
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+    let x = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x;
+    return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/* ===== 塔段空气声学响应（人耳校准，低鼓真空段：只做冷光/微雪，禁冲击感）=====
+   局部 .07-1.37 中频六连音（每 .26s）→ 空钟面内六次极克制的冷光回应；
+   1.91 高频单点 → 圆窗洒雪光路上一列远雪同时明灭（远光一闪）；
+   7.57（全局61.5）后中频台阶渐强 → 穿堂雪加速增密、塔心冷雾渗出、
+   空钟面的黑反向加深（「虚空在凝视」），人物 rim 同步收紧变亮。 */
+const fx = document.getElementById("fx");
+const fctx = fx.getContext("2d");
+const FW = 1920, FH = 1080;
+const WIN_X = 960, WIN_Y = 228;   // 圆窗冷光中心（对齐 env 的 50% 21%）
+
+// 体积光柱：自圆窗向下扇形洒开的六束冷光（近实远虚，缓呼吸 + 极慢摆）
+const RAYS = (() => {
+  const r = mulberry32(7311);
+  const arr = [];
+  for (let i = 0; i < 6; i++) {
+    const u = i / 5;
+    arr.push({
+      ang: 1.22 + u * .92,             // 朝下扇形（弧度，70°-123°）
+      len: 620 + r() * 300,
+      w: 70 + r() * 60,
+      a: .05 + r() * .05,
+      ph: r() * 6.283,
+      sw: .18 + r() * .2               // 摆动速度
+    });
+  }
+  return arr;
+})();
+
+// 光柱里悬浮的冷尘（被光照亮的微粒，慢浮，给体积光「介质感」）
+const DUST_N = 46;
+const dust = (() => {
+  const r = mulberry32(8821);
+  const arr = [];
+  for (let i = 0; i < DUST_N; i++) {
+    arr.push({
+      x0: WIN_X + (r() - .5) * 760,
+      y0: WIN_Y + 40 + r() * 620,
+      rad: .8 + r() * 1.5,
+      vx: (r() - .5) * 10,
+      vy: 5 + r() * 9,
+      ph: r() * 6.283,
+      a: .1 + r() * .28
+    });
+  }
+  return arr;
+})();
+
+// 微雪三层纵深：远（小慢淡）/ 中 / 近（大快亮、带运动拖影）；
+// 150 粒常驻 + 70 粒台阶期（61.5 后穿堂风加剧）激活
+const SNOW_N = 220;
+const snow = (() => {
+  const r = mulberry32(5393);
+  const arr = [];
+  for (let i = 0; i < SNOW_N; i++) {
+    const depth = r();
+    arr.push({
+      x0: r() * (FW + 200) - 100,
+      y0: r() * (FH + 120) - 60,
+      rad: .5 + depth * 2.3,
+      vx: -(7 + r() * 16) - depth * 8,
+      vy: 10 + r() * 26 + depth * 34,
+      ph: r() * 6.283,
+      tw: .5 + r() * 1.3,
+      a: .14 + depth * .42,
+      near: depth > .82,              // 近景层画运动拖影
+      extra: i >= 150,                // 后 70 粒台阶期才出现
+      gateThr: .25 + r() * .7         // 激活阈值（错开增密节奏）
+    });
+  }
+  return arr;
+})();
+
+// 六连音冷光回应点（窗内微散，固定种子）——加亮到成片可见，并带细涟漪环
+const SIX_T = [.07, .33, .59, .85, 1.11, 1.37];
+const SIX_POS = (() => {
+  const r = mulberry32(6107);
+  return SIX_T.map(() => ({
+    x: WIN_X + (r() - .5) * 230,
+    y: WIN_Y + (r() - .5) * 110,
+    rad: 110 + r() * 90,
+    amp: .17 + r() * .09
+  }));
+})();
+
+// 高频远光：光路上一列远雪（自圆窗斜洒下的光带）
+const SPARK_T = 1.91;
+const SPARKS = (() => {
+  const r = mulberry32(5584);
+  const arr = [];
+  for (let i = 0; i < 16; i++) {
+    const u = i / 15;
+    arr.push({
+      // 光带：自窗心向左右两侧斜下洒开
+      x: WIN_X + (r() - .5) * (180 + u * 760),
+      y: WIN_Y + 30 + u * (300 + r() * 140) + (r() - .5) * 50,
+      rad: .9 + r() * 1.8
+    });
+  }
+  return arr;
+})();
+
+// 体积光柱：窗心为顶点的梯形光束，纵向渐变（窗处亮、落地消融）
+function drawRays(t, gate) {
+  for (const r of RAYS) {
+    const sway = Math.sin(t * r.sw + r.ph) * .022;
+    const a = r.a * (.62 + .38 * Math.sin(t * .5 + r.ph)) * (1 + .8 * gate);
+    const a2 = a + .035 * gate;                 // 台阶期光柱同步收紧变亮
+    const ang = r.ang + sway;
+    const dx = Math.cos(ang), dy = Math.sin(ang);
+    // 光束中轴末端与半宽端点
+    const ex = WIN_X + dx * r.len, ey = WIN_Y + dy * r.len;
+    const px = -dy, py = dx;                    // 垂直方向
+    const w0 = r.w * .35, w1 = r.w * 1.9;       // 近窄远宽
+    fctx.save();
+    const g = fctx.createLinearGradient(WIN_X, WIN_Y, ex, ey);
+    g.addColorStop(0, `rgba(168,190,236,${(a2 * 1.7).toFixed(3)})`);
+    g.addColorStop(.5, `rgba(130,156,214,${a2.toFixed(3)})`);
+    g.addColorStop(1, "rgba(96,122,180,0)");
+    fctx.fillStyle = g;
+    fctx.beginPath();
+    fctx.moveTo(WIN_X + px * w0, WIN_Y + py * w0);
+    fctx.lineTo(WIN_X - px * w0, WIN_Y - py * w0);
+    fctx.lineTo(ex - px * w1, ey - py * w1);
+    fctx.lineTo(ex + px * w1, ey + py * w1);
+    fctx.closePath();
+    fctx.fill();
+    fctx.restore();
+  }
+}
+
+// 光柱里的冷尘：被同一束光照亮，慢浮横漂 + 闪烁
+function drawDust(t, gate) {
+  for (const p of dust) {
+    const x = p.x0 + p.vx * t + Math.sin(t * .28 + p.ph) * 22;
+    let y = (p.y0 + p.vy * t) % (WIN_Y + 760);
+    if (y < WIN_Y) y += 760;
+    const tw = .5 + .5 * Math.sin(t * .8 + p.ph * 2);
+    const a = p.a * (.35 + .65 * tw) * (1 + .6 * gate);
+    fctx.fillStyle = `rgba(214,228,255,${a.toFixed(3)})`;
+    fctx.beginPath();
+    fctx.arc(x, y, p.rad, 0, 6.283);
+    fctx.fill();
+  }
+}
+
+function drawAir(t) {
+  fctx.clearRect(0, 0, FW, FH);
+  const gate = smooth(7.57, 9.3, t);   // 台阶渐强门
+
+  // —— 塔心冷雾渗出（顶部冷蓝径向，台阶期渐亮）——
+  const mist = fctx.createRadialGradient(WIN_X, -40, 0, WIN_X, -40, 760);
+  const ma = .06 + .20 * gate;
+  mist.addColorStop(0, `rgba(88,114,168,${ma.toFixed(3)})`);
+  mist.addColorStop(.55, `rgba(50,70,116,${(ma * .55).toFixed(3)})`);
+  mist.addColorStop(1, "rgba(20,30,52,0)");
+  fctx.fillStyle = mist;
+  fctx.fillRect(0, 0, FW, FH);
+
+  // —— 空钟面黑窗反向加深（越唱越像虚空在回望）——
+  if (gate > 0) {
+    const dg = fctx.createRadialGradient(WIN_X, WIN_Y, 0, WIN_X, WIN_Y, 300);
+    dg.addColorStop(0, `rgba(1,2,6,${(.32 * gate).toFixed(3)})`);
+    dg.addColorStop(.6, `rgba(1,2,6,${(.14 * gate).toFixed(3)})`);
+    dg.addColorStop(1, "rgba(1,2,6,0)");
+    fctx.fillStyle = dg;
+    fctx.fillRect(0, 0, FW, FH);
+  }
+
+  // —— 体积光柱与冷尘（圆窗光的介质感，全段在）——
+  drawRays(t, gate);
+  drawDust(t, gate);
+
+  // —— 六连音：窗内冷光回应（柔辉 + 一圈细涟漪，指数柔衰，无打点冲击）——
+  for (let i = 0; i < SIX_T.length; i++) {
+    const age = t - SIX_T[i];
+    if (age < 0 || age > .85) continue;
+    const p = SIX_POS[i];
+    const a = p.amp * Math.exp(-age / .24);
+    const g = fctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.rad);
+    g.addColorStop(0, `rgba(196,214,248,${a.toFixed(3)})`);
+    g.addColorStop(.55, `rgba(140,166,218,${(a * .42).toFixed(3)})`);
+    g.addColorStop(1, "rgba(90,115,170,0)");
+    fctx.fillStyle = g;
+    fctx.beginPath();
+    fctx.arc(p.x, p.y, p.rad, 0, 6.283);
+    fctx.fill();
+    // 细涟漪环：自回应点轻扩一圈即消
+    if (age < .6) {
+      const rr = 26 + age * 190;
+      fctx.strokeStyle = `rgba(200,218,250,${(a * .5 * (1 - age / .6)).toFixed(3)})`;
+      fctx.lineWidth = 1.6;
+      fctx.beginPath();
+      fctx.arc(p.x, p.y, rr, 0, 6.283);
+      fctx.stroke();
+    }
+  }
+
+  // —— 高频单点：窗心一晕远光 + 光带远雪同列明灭 ——
+  const sAge = t - SPARK_T;
+  let sparkA = 0;
+  if (sAge >= 0 && sAge < 1.1) {
+    sparkA = Math.exp(-sAge / .42);
+    const g = fctx.createRadialGradient(WIN_X, WIN_Y, 0, WIN_X, WIN_Y, 270);
+    const a = .2 * sparkA;
+    g.addColorStop(0, `rgba(200,218,250,${a.toFixed(3)})`);
+    g.addColorStop(.6, `rgba(138,164,218,${(a * .35).toFixed(3)})`);
+    g.addColorStop(1, "rgba(90,115,170,0)");
+    fctx.fillStyle = g;
+    fctx.beginPath();
+    fctx.arc(WIN_X, WIN_Y, 270, 0, 6.283);
+    fctx.fill();
+    // 各点微错峰：像光带里一串远雪被同一阵风点亮
+    for (let i = 0; i < SPARKS.length; i++) {
+      const s = SPARKS[i];
+      const sa = sparkA * (.6 + .4 * Math.sin(sAge * 9 + i * 1.7));
+      if (sa <= .01) continue;
+      fctx.fillStyle = `rgba(232,240,255,${(.95 * sa).toFixed(3)})`;
+      fctx.beginPath();
+      fctx.arc(s.x, s.y, s.rad * 1.9, 0, 6.283);
+      fctx.fill();
+    }
+  }
+
+  // —— 三层飘雪（穿堂风斜飘，呼吸横摆；近景带运动拖影；台阶期加速增密变亮）——
+  const wind = 1 + .6 * gate;
+  for (const p of snow) {
+    if (p.extra && gate < p.gateThr) continue;
+    const appear = p.extra ? smooth(p.gateThr - .14, p.gateThr + .14, gate) : 1;
+    const vx = p.vx * wind, vy = p.vy * wind;
+    const x = ((p.x0 + vx * t + Math.sin(t * .32 + p.ph) * 14) % (FW + 200)) - 100;
+    let y = (p.y0 + vy * t) % (FH + 120);
+    if (y < -60) y += FH + 120;
+    const tw = .5 + .5 * Math.sin(t * p.tw + p.ph);
+    const a = p.a * (.35 + .65 * tw) * (1 + .45 * gate) * appear;
+    const rad = p.rad * (1 + .18 * gate);
+    if (p.near) {
+      // 近景雪：沿运动方向一道柔短拖影，速度感与景深
+      const sp = Math.hypot(vx, vy);
+      const ux = vx / sp, uy = vy / sp, tl = rad * 3.2;
+      const lg = fctx.createLinearGradient(x, y, x - ux * tl, y - uy * tl);
+      lg.addColorStop(0, `rgba(206,220,246,${a.toFixed(3)})`);
+      lg.addColorStop(1, "rgba(206,220,246,0)");
+      fctx.strokeStyle = lg;
+      fctx.lineWidth = rad * 1.1;
+      fctx.lineCap = "round";
+      fctx.beginPath();
+      fctx.moveTo(x, y);
+      fctx.lineTo(x - ux * tl, y - uy * tl);
+      fctx.stroke();
+    }
+    fctx.fillStyle = `rgba(206,220,246,${a.toFixed(3)})`;
+    fctx.beginPath();
+    fctx.arc(x, y, rad, 0, 6.283);
+    fctx.fill();
+  }
+}
+
+function draw(t) {
+  // 持续推近空钟面：1.0→1.18（与 pre1-env plate 完全同曲线；前段极缓、
+  // 后段随台阶渐强略加速，像她被塔身一点点吞进去）；叠一丝镜头呼吸
+  const push = Math.pow(Math.min(t, D) / D, 1.15);
+  const sc = 1.0 + 0.18 * push;
+  const breath = 1 + .0035 * Math.sin(t * .31 + .8);
+  world.style.transform = `scale(${(sc * breath).toFixed(4)})`;
+
+  const enter = smooth(0.25, 1.5, t);
+  const leave = 1 - smooth(9.3, 9.55, t);   // 雪幕前溶出
+  const vis = enter * leave;
+  girl.style.opacity = vis.toFixed(3);
+  // 穿堂风：极轻 sway（雪光强时轮廓微微一紧）
+  const sway = Math.sin(t * 0.7) * 0.22;
+  girl.style.transform = `rotate(${sway.toFixed(3)}deg)`;
+  // 台阶期冷光收紧：双侧 rim 随冷雾一起变亮
+  const gate = smooth(7.57, 9.3, t);
+  const fl = (0.44 + 0.1 * Math.sin(t * 0.9 + 0.6) + 0.06 * Math.sin(t * 0.31)) * (1 + .24 * gate);
+  const fr = (0.36 + 0.09 * Math.sin(t * 0.8 + 2.0)) * (1 + .24 * gate);
+  rimL.style.opacity = (fl * vis).toFixed(3);
+  rimR.style.opacity = (fr * vis).toFixed(3);
+
+  drawAir(t);
+}
+
+const state = { t: 0 };
+tl.to(state, { t: D, duration: D, ease: "none",
+               onUpdate: () => draw(state.t) }, 0);
+draw(0);
+</script>
+</body>
+</html>

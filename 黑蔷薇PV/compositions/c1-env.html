@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Chorus1 Env — 下沉虚空 → 滅びの庭（68.37-107.28）</title>
+<script src="assets/vendor/gsap.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000; overflow: hidden; }
+  .clip { position: absolute; }
+
+  #root { width: 1920px; height: 1080px; overflow: hidden; background: #030305; }
+  #world { position: absolute; inset: 0; will-change: transform; }
+
+  /* ===== 下沉虚空：超高渐变层持续下移，制造她正在坠入深处的世界运动 ===== */
+  #void-plate {
+    position: absolute;
+    width: 2000px; height: 2300px;
+    left: -40px; top: -260px;
+    will-change: transform;
+  }
+  /* 上方冷白开口（她正在沉离的光） */
+  #cold-mouth {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(46% 26% at 50% 4%,
+        rgba(186,204,240,.5) 0%, rgba(90,112,160,.14) 42%, rgba(0,0,0,0) 72%);
+    mix-blend-mode: screen;
+  }
+  /* 深渊底部暗红（随下沉涨起） */
+  #red-deep {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(72% 40% at 50% 106%,
+        rgba(116,10,20,.6) 0%, rgba(60,5,12,.22) 44%, rgba(0,0,0,0) 78%);
+    mix-blend-mode: screen;
+    opacity: .1;
+  }
+  /* 虚空里极远处的红色微粒带（深度感） */
+  #haze {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(26% 14% at 36% 72%, rgba(90,14,22,.18) 0%, rgba(0,0,0,0) 100%),
+      radial-gradient(20% 11% at 66% 82%, rgba(120,20,26,.16) 0%, rgba(0,0,0,0) 100%);
+    mix-blend-mode: screen;
+  }
+
+  /* ===== 落底：S5 毁灭之庭 ===== */
+  #garden {
+    position: absolute;
+    width: 1920px; height: 1080px;
+    left: 0; top: 0;
+    object-fit: cover;
+    transform-origin: 62% 55%;
+    filter: brightness(.5) saturate(.95) contrast(1.15);
+    opacity: 0;
+    will-change: transform, filter, opacity;
+  }
+  /* 远城火光呼吸 */
+  #city-glow {
+    position: absolute; inset: 0;
+    background: radial-gradient(30% 13% at 72% 50%,
+      rgba(255,120,46,.2) 0%, rgba(160,40,18,.06) 60%, rgba(0,0,0,0) 100%);
+    mix-blend-mode: screen;
+    opacity: 0;
+  }
+  /* 落底时自地面泛起的暗红反光（水洼/废墟） */
+  #ground-glow {
+    position: absolute; inset: 0;
+    background: radial-gradient(50% 22% at 50% 100%,
+      rgba(120,16,24,.22) 0%, rgba(0,0,0,0) 75%);
+    mix-blend-mode: screen;
+    opacity: 0;
+  }
+
+  /* ===== 收束：近黑 + 一粒余烬（钩子接 Verse2 銀の燭台）===== */
+  #collapse {
+    position: absolute; inset: 0;
+    background: rgba(1,1,2,.985);
+    opacity: 0;
+  }
+  #ember-dot {
+    position: absolute;
+    width: 180px; height: 180px;
+    left: 800px; top: 470px;
+    border-radius: 50%;
+    background: radial-gradient(circle,
+      rgba(255,180,90,.95) 0%, rgba(220,60,24,.55) 26%,
+      rgba(120,14,14,.18) 55%, rgba(0,0,0,0) 100%);
+    mix-blend-mode: screen;
+    opacity: 0;
+    transform: scale(3);
+    will-change: opacity, transform;
+  }
+</style>
+</head>
+<body>
+  <div id="root" data-composition-id="c1-env" data-width="1920" data-height="1080">
+    <div id="world" class="clip" data-start="0" data-duration="38.91"
+         data-track-index="0" data-layout-ignore>
+
+      <div id="void-plate">
+        <div id="cold-mouth"></div>
+        <div id="haze"></div>
+        <div id="red-deep"></div>
+      </div>
+
+      <img id="garden" class="clip" src="assets/images/garden.png"
+           data-start="0" data-duration="38.91" data-track-index="1"
+           data-layout-allow-overflow alt="">
+      <div id="city-glow" class="clip"
+           data-start="0" data-duration="38.91" data-track-index="2"
+           data-layout-ignore></div>
+      <div id="ground-glow" class="clip"
+           data-start="0" data-duration="38.91" data-track-index="2"
+           data-layout-ignore></div>
+
+      <div id="collapse" class="clip"
+           data-start="0" data-duration="38.91" data-track-index="8"
+           data-layout-ignore></div>
+      <div id="ember-dot" class="clip"
+           data-start="0" data-duration="38.91" data-track-index="9"
+           data-layout-ignore></div>
+    </div>
+  </div>
+
+<script>
+/* 局部 0-38.91s（全局 68.37-107.28）
+   0-17.4   下沉虚空：冷光开口在头顶退远，暗红自深渊涨起，世界持续下移；
+   17.4     落底冲击（fx 层红闪），S5 毁灭之庭显现，她在庭中水洼上歌唱；
+   17.6-31  镜头极缓推；31s 起推向右侧燃烧的远城，人物由各镜自行淡出；
+   37.1-38.9 压成近黑，红光收成一粒余烬，留给下一段燭台。
+   PUNCHES 与各镜头共用：[全局秒, 峰强度, 时长]，起点换算局部 0 / 17.4。 */
+window.__timelines = window.__timelines || {};
+const tl = gsap.timeline({ paused: true });
+window.__timelines["c1-env"] = tl;
+
+const world = document.getElementById("world");
+const voidPlate = document.getElementById("void-plate");
+const cold = document.getElementById("cold-mouth");
+const redDeep = document.getElementById("red-deep");
+const garden = document.getElementById("garden");
+const cityGlow = document.getElementById("city-glow");
+const groundGlow = document.getElementById("ground-glow");
+const collapse = document.getElementById("collapse");
+const ember = document.getElementById("ember-dot");
+const D = 38.91;
+const LAND = 17.4;   // 落底局部时刻（85.77-68.37）
+
+const PUNCHES = [
+  { t: 0.0,   amp: 11, dur: .55 },   // 副歌爆发
+  { t: 2.23,  amp: 6,  dur: .35 },   // 裂いて
+  { t: 6.53,  amp: 9,  dur: .5  },   // 锁链崩断（74.9）
+  { t: LAND,  amp: 14, dur: .65 }    // 落底
+];
+
+const clamp01 = v => Math.min(1, Math.max(0, v));
+const smooth = (a, b, x) => { x = clamp01((x - a) / (b - a)); return x * x * (3 - 2 * x); };
+const decay = x => x <= 0 ? 0 : Math.exp(-x * 5.2);
+
+function punchAt(t) {
+  let jx = 0, jy = 0, amp = 0;
+  for (const p of PUNCHES) {
+    const u = (t - p.t) / p.dur;
+    if (u < 0 || u > 1) continue;
+    const e = decay(u);
+    jx += Math.sin(t * 97 + p.t * 13) * p.amp * e;
+    jy += Math.cos(t * 113 + p.t * 7) * p.amp * e;
+    amp = Math.max(amp, e * p.amp / 14);
+  }
+  return { jx, jy, amp };
+}
+
+function draw(t) {
+  const enter = smooth(0, .45, t);
+  const landed = smooth(LAND - .25, LAND + .5, t);
+
+  // 虚空下移 26px/s（层 2300 高，平移到 +192 仍不露底）
+  voidPlate.style.transform = `translateY(${(-260 + t * 26).toFixed(1)}px)`;
+  cold.style.opacity = ((.55 - .43 * smooth(0, LAND, t)) * enter * (1 - landed)).toFixed(3);
+  redDeep.style.opacity = ((.1 + .45 * smooth(0, LAND, t)) * enter * (1 - landed * .9)).toFixed(3);
+
+  // 毁灭之庭
+  garden.style.opacity = landed.toFixed(3);
+  let gsc = 1.02 + .03 * smooth(LAND, 29.5, t);
+  // 29.5s（≈97.9）起横向推向右侧燃烧的远城
+  let gx = 260 * smooth(29.5, 38.9, t);
+  garden.style.transform = `translateX(${gx.toFixed(1)}px) scale(${gsc.toFixed(4)})`;
+  const fire = .7 + .3 * Math.sin(t * 1.7) * Math.sin(t * .43 + .8);
+  // 她离场（29.5s≈97.9）后，远城残火渐亮成为画面主角，直到 collapse 压黑
+  const envLift = 1 + .36 * smooth(29.5, 36.8, t);
+  garden.style.filter =
+    `brightness(${((.62 * fire + .12) * envLift).toFixed(3)}) saturate(.95) contrast(1.15)`;
+  cityGlow.style.opacity = (landed * envLift * (.72 + .22 * Math.sin(t * 2.3 + 1))).toFixed(3);
+  groundGlow.style.opacity = (landed * (.8 + .2 * Math.sin(t * 1.1))).toFixed(3);
+
+  // 收束 + 余烬
+  const cp = smooth(37.13, 38.55, t);
+  collapse.style.opacity = (cp * .985).toFixed(3);
+  const em = smooth(36.9, 37.7, t);
+  ember.style.opacity = em.toFixed(3);
+  // 收成一粒明确的暖金烬点（烛火钩子，终值约 36px）
+  ember.style.transform =
+    `scale(${(3 - 2.8 * smooth(37.4, 38.85, t)).toFixed(3)})`;
+
+  // 震屏
+  const p = punchAt(t);
+  world.style.transform = `translate(${p.jx.toFixed(1)}px, ${p.jy.toFixed(1)}px)`;
+}
+
+const state = { t: 0 };
+tl.to(state, { t: D, duration: D, ease: "none",
+               onUpdate: () => draw(state.t) }, 0);
+draw(0);
+</script>
+</body>
+</html>

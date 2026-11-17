@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Verse1 Env — 持久教堂世界层（38.0-53.93）</title>
+<script src="assets/vendor/gsap.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000; overflow: hidden; }
+  .clip { position: absolute; }
+
+  #root {
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    background: #030409;
+  }
+
+  /* S8 无人教堂内景：左三扇尖拱窗透冷光、右深处祭坛管风琴、湿石地反光。
+     原图已极暗，只稍压对比、保住窗光束与空间体积（人物/道具才是主体） */
+  #env-plate {
+    width: 1920px;
+    height: 1080px;
+    left: 0; top: 0;
+    object-fit: cover;
+    transform-origin: 46% 42%;
+    filter: brightness(.62) saturate(.42) contrast(1.18);
+    will-change: transform, filter;
+  }
+
+  /* 冷光补强：左上窗光弱体积亮 + 地面冷反光（图内自带光束，这里只点一点） */
+  #env-light {
+    inset: 0;
+    background:
+      radial-gradient(40% 56% at 22% 10%, rgba(150,180,235,.10) 0%, rgba(0,0,0,0) 64%),
+      radial-gradient(70% 46% at 50% 108%, rgba(30,40,66,.18) 0%, rgba(0,0,0,0) 70%);
+    mix-blend-mode: screen;
+  }
+
+  /* 整体压暗：保证人物与道具是视觉主体（涟漪转场后加深一档） */
+  #env-dim {
+    inset: 0;
+    background: rgba(2,3,7,.22);
+  }
+</style>
+</head>
+<body>
+  <div id="root"
+       data-composition-id="v1-env"
+       data-width="1920"
+       data-height="1080">
+
+    <img id="env-plate" class="clip"
+         src="assets/images/church-interior.png"
+         data-start="0" data-duration="15.93" data-track-index="0"
+         data-layout-allow-overflow alt="">
+
+    <div id="env-light" class="clip"
+         data-start="0" data-duration="15.93" data-track-index="1"
+         data-layout-ignore></div>
+    <div id="env-dim" class="clip"
+         data-start="0" data-duration="15.93" data-track-index="3"
+         data-layout-ignore></div>
+  </div>
+
+<script>
+/* 环境层：一镜到底缓推（15.93s 内 1.06→1.13，轻微左移），
+   镜头在其上硬切，世界连续，消除 PPT 翻页感。
+   S8 为无人场景，涟漪转场（局部4.15s）只需再压暗一档给镜2肖像让路；
+   镜1 少女在 v1-shot1 的同步运动 wrapper 里，随世界一起推。 */
+window.__timelines = window.__timelines || {};
+const tl = gsap.timeline({ paused: true });
+window.__timelines["v1-env"] = tl;
+
+const plate = document.getElementById("env-plate");
+gsap.set(plate, { scale: 1.06, x: 10 });
+tl.to(plate, { scale: 1.13, x: -18, duration: 15.93, ease: "none" }, 0);
+
+// 涟漪转场（局部 4.15s = 全局 42.20）：世界压暗一档
+tl.to(plate, {
+      filter: "brightness(.44) saturate(.34) contrast(1.22)",
+      duration: 0.55, ease: "power2.inOut" }, 4.15);
+</script>
+</body>
+</html>

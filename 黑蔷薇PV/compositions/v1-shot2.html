@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Verse1 Shot2 — 白い肖像が 夜明けを拒む (42.36) 剪影版</title>
+<script src="assets/vendor/gsap.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: transparent; overflow: hidden; }
+  .clip { position: absolute; }
+
+  #root { width: 1920px; height: 1080px; overflow: hidden; }
+
+  .actor { position: absolute; will-change: opacity, transform, clip-path; }
+  .actor img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: contain;
+  }
+  .sil { filter: brightness(.12) saturate(.22) contrast(1.52); }
+  .rim { mix-blend-mode: screen; }
+
+  /* 肖像：心理插入镜头，椭圆画框居中 */
+  #portrait-actor {
+    width: 780px; height: 780px;
+    left: 50%; top: 50%;
+    margin: -390px 0 0 -390px;
+    opacity: 0;
+  }
+
+  /* 黎明体积光（横向衰减 + 纵向 mask 消融） */
+  #beam {
+    top: -220px;
+    right: -160px;
+    width: 760px;
+    height: 1500px;
+    transform: rotate(-16deg);
+    background: linear-gradient(105deg,
+      rgba(220,232,255,0) 0%,
+      rgba(205,225,255,.07) 42%,
+      rgba(222,237,255,.20) 72%,
+      rgba(236,246,255,.36) 100%);
+    -webkit-mask-image: linear-gradient(180deg,
+      rgba(0,0,0,0) 0%, rgba(0,0,0,1) 24%,
+      rgba(0,0,0,1) 72%, rgba(0,0,0,0) 100%);
+    mask-image: linear-gradient(180deg,
+      rgba(0,0,0,0) 0%, rgba(0,0,0,1) 24%,
+      rgba(0,0,0,1) 72%, rgba(0,0,0,0) 100%);
+    mix-blend-mode: screen;
+    opacity: 0;
+    will-change: opacity, transform;
+  }
+</style>
+</head>
+<body>
+  <div id="root"
+       data-composition-id="v1-shot2"
+       data-width="1920"
+       data-height="1080">
+
+    <div id="portrait-actor" class="clip actor"
+         data-start="0" data-duration="3.75" data-track-index="1">
+      <img class="sil" src="assets/images/portrait.png" alt="">
+      <img class="rim" id="rimR" src="assets/rim/portrait-rimR.png" alt="">
+      <img class="rim" id="rimL" src="assets/rim/portrait-rimL.png" alt="">
+    </div>
+
+    <div id="beam" class="clip"
+         data-start="0" data-duration="3.75" data-track-index="3"
+         data-layout-allow-overflow></div>
+  </div>
+
+<script>
+/* 局部 0-3.75s（全局 42.36-46.11）
+   涟漪中以圆形遮罩凝出肖像；黎明光从右压入，只点亮右缘 rim；
+   光在 2.7s 停步轻退——「拒む」，右缘随之暗下。切点由柱影遮挡完成。 */
+window.__timelines = window.__timelines || {};
+const tl = gsap.timeline({ paused: true });
+window.__timelines["v1-shot2"] = tl;
+
+const portrait = document.getElementById("portrait-actor");
+const rimR = document.getElementById("rimR");
+const rimL = document.getElementById("rimL");
+const beam = document.getElementById("beam");
+
+// 圆形遮罩凝现（涟漪转场的视觉延续）
+gsap.set(portrait, {
+  opacity: 1,
+  scale: 1.02,
+  clipPath: "circle(0% at 50% 48%)"
+});
+gsap.set(rimL, { opacity: .12 });   // 环境反光始终极弱
+gsap.set(rimR, { opacity: 0 });
+tl.to(portrait, {
+      clipPath: "circle(62% at 50% 48%)",
+      duration: .85, ease: "power2.out" }, 0.05)
+  .to(portrait, { scale: 1.045, duration: 3.6, ease: "none" }, 0.15);
+
+// 光束压入 → 右缘 rim 亮起
+gsap.set(beam, { opacity: 0, x: 480 });
+tl.to(beam, { opacity: 1, duration: 1.2, ease: "power2.out" }, 0.5)
+  .to(beam, { x: -360, duration: 1.7, ease: "power2.out" }, 0.8)
+  .to(rimR, { opacity: .95, duration: 1.0, ease: "power2.out" }, 1.0);
+
+// 黎明停步：光与右缘一同轻退
+tl.to(beam, { x: -326, duration: 1.05, ease: "sine.inOut" }, 2.7)
+  .to(rimR, { opacity: .55, duration: 1.05, ease: "sine.inOut" }, 2.7);
+</script>
+</body>
+</html>

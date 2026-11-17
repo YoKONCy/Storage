@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Pre1+Chorus1 FX — 雪幕/爆闪/冷铁屑/落底环（53.93-107.28）</title>
+<script src="assets/vendor/gsap.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: transparent; overflow: hidden; }
+  .clip { position: absolute; }
+  #root { width: 1920px; height: 1080px; overflow: hidden; }
+  canvas { position: absolute; inset: 0; }
+
+  /* 全屏闪光层（白/红事件） */
+  #flash {
+    position: absolute; inset: 0;
+    background: #fff;
+    opacity: 0;
+    will-change: opacity, background;
+  }
+  /* 雪幕全遮用的白纱（斜向，63.51 扫切 / 65.45 全遮） */
+  #veil {
+    position: absolute;
+    top: -20%;
+    width: 70%;
+    height: 150%;
+    background: linear-gradient(105deg,
+      rgba(0,0,0,0) 0%, rgba(226,236,252,.94) 42%,
+      rgba(240,246,255,.98) 50%, rgba(226,236,252,.94) 58%, rgba(0,0,0,0) 100%);
+    opacity: 0;
+    will-change: transform, opacity;
+  }
+  /* 红色浸染：72.68「砕いて」起自右下被血玫瑰染红，缓缓蔓延，
+     85.77 落底时恰好铺满（红庭背景接班），随后淡出。普通 alpha 只染暗部。
+     注意：必须显式 left/top/width/height——实测 inset:-8% 简写在渲染链里
+     会让血雾团完全不可见（元素尺寸/定位异常），scale>1 的溢出交给 root 裁切 */
+  #red-veil {
+    position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+    /* 色值必须够亮：成片栈里还要再吃元素 opacity、右下 vignette 暗角、
+       root brightness 三重衰减，draft 里可见的暗红在成片里会黑掉（实测） */
+    background:
+      radial-gradient(50% 46% at 88% 96%,
+        rgba(196,24,36,.90) 0%, rgba(140,14,24,.58) 42%, rgba(60,5,10,.18) 66%, rgba(0,0,0,0) 80%),
+      radial-gradient(42% 50% at 100% 56%,
+        rgba(168,18,28,.74) 0%, rgba(100,9,17,.38) 50%, rgba(0,0,0,0) 78%),
+      radial-gradient(34% 30% at 68% 100%,
+        rgba(208,30,40,.64) 0%, rgba(90,8,15,.2) 58%, rgba(0,0,0,0) 78%);
+    opacity: 0;
+    transform: scale(.22);
+    transform-origin: 92% 96%;
+    will-change: transform, opacity;
+  }
+  /* 漫天血气：三团血雾负责右下角长出的具体形状，本层负责落底前把
+     全屏罩上一层极弱酒红底色，中后期才缓起 */
+  #red-wash {
+    position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+    background: radial-gradient(150% 140% at 86% 94%,
+      rgba(150,20,30,.55) 0%, rgba(110,10,18,.36) 40%,
+      rgba(70,6,12,.20) 66%, rgba(34,3,7,.09) 85%, rgba(0,0,0,0) 100%);
+    opacity: 0;
+    will-change: opacity;
+  }
+  /* 落底前的全屏暗血红平涂：径向雾在数学上铺不进 vignette 四角，
+     82.4s 后快速托底，85.5 达到 .55（落底瞬间铺满），红庭淡入即同步淡出 */
+  #red-base {
+    position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+    background: rgba(58, 6, 12, 1);
+    opacity: 0;
+    will-change: opacity;
+  }
+</style>
+</head>
+<body>
+  <div id="root" data-composition-id="pc-fx" data-width="1920" data-height="1080">
+    <canvas id="fx" class="clip" width="1920" height="1080"
+            data-start="0" data-duration="53.35" data-track-index="10"
+            data-layout-ignore></canvas>
+    <div id="flash" class="clip"
+         data-start="0" data-duration="53.35" data-track-index="9"
+         data-layout-ignore></div>
+    <div id="veil" class="clip"
+         data-start="0" data-duration="53.35" data-track-index="9"
+         data-layout-allow-overflow
+         data-layout-ignore></div>
+    <div id="red-veil" class="clip"
+         data-start="0" data-duration="53.35" data-track-index="9"
+         data-layout-allow-overflow
+         data-layout-ignore></div>
+    <div id="red-wash" class="clip"
+         data-start="0" data-duration="53.35" data-track-index="9"
+         data-layout-ignore></div>
+    <div id="red-base" class="clip"
+         data-start="0" data-duration="53.35" data-track-index="9"
+         data-layout-ignore></div>
+  </div>
+
+<script>
+/* 过渡/冲击事件表（局部秒 = 全局 - 53.93）：
+    9.58  雪幕扫切（伫立近景切换，半透雪带横掠）
+   11.52  雪幕全遮（A1 后倾→A6 沉沦换演员，塔在此瞬间沉为虚空）
+   14.44  副歌爆发：白闪+红闪+金红碎屑放射
+   16.67  裂いて：小红闪
+   20.97  锁链崩断：白金爆闪+金三角碎屑
+   27.53  切絶唱近景：暗红柔闪
+   31.84  落底：红闪+白芯+扩张尘环+碎屑
+   全部为时间纯函数，碎屑参数固定种子预生成。 */
+window.__timelines = window.__timelines || {};
+const tl = gsap.timeline({ paused: true });
+window.__timelines["pc-fx"] = tl;
+
+const canvas = document.getElementById("fx");
+const ctx = canvas.getContext("2d");
+const W = 1920, H = 1080;
+const flash = document.getElementById("flash");
+const veil = document.getElementById("veil");
+
+function mulberry32(seed) {
+  return function () {
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+    let x = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x;
+    return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const clamp01 = v => Math.min(1, Math.max(0, v));
+const smooth = (a, b, x) => { x = clamp01((x - a) / (b - a)); return x * x * (3 - 2 * x); };
+
+// 闪光事件：[时刻, 峰值alpha, 快衰时长, 尾衰时长, r,g,b]
+const FLASHES = [
+  // 副歌入主：峰值全白冲击只服务 68.37 切点一瞬，衰减必须快——
+  // 旧版 .22/.26 长尾在 hot 红 grade 下发酒红雾，糊住玫瑰第一级（68.39-.65 出现中）
+  [14.44, .58, .04, .10, 255, 250, 246],
+  [14.50, .30, .05, .14, 220, 30,  26],
+  [16.67, .24, .10, .22, 210, 36,  30],
+  // 20.97 的全屏冷白闪已移除：全屏冷白 × 全局猩红 tint 会发酒红雾，
+  // 断扣冷光收归 c1-shot2 的锁扣局部径向闪（挣裂处一线冷光，不铺屏）
+  // c1-shot3 切点：峰值即退，.55 长尾在 hot grade 下会糊成一整格酒红雾
+  [27.53, .24, .12, .30, 190, 26,  24],
+  [31.84, .20, .10, .34, 255, 240, 225],
+  // 落底红闪：峰值冲击保留，但 .22s 内必须退净让位给正在淡入的红庭（旧 .68 尾会盖园）
+  [31.90, .44, .08, .22, 226, 32,  22]
+];
+
+// 碎屑爆发事件：[时刻, 数量, 生命, 速度, 色彩(冷铁屑/红碎), 种子, 爆点]
+const BURSTS = [
+  { t: 14.44, n: 30, life: 1.0, spd: 900,  kind: "red", seed: 11 },
+  { t: 20.97, n: 24, life: .9,  spd: 1050, kind: "iron", seed: 22, cx: 883, cy: 440 },
+  { t: 31.84, n: 26, life: 1.1, spd: 920,  kind: "red", seed: 33 }
+];
+const burstParts = BURSTS.map(ev => {
+  const r = mulberry32(ev.seed);
+  const arr = [];
+  for (let i = 0; i < ev.n; i++) {
+    const ang = r() * Math.PI * 2;
+    const v = ev.spd * (.35 + r() * .75);
+    arr.push({
+      ang, v,
+      // 冷铁屑是细条状（断裂链节）；红碎屑保持细小三角（避免聚成「小三角群」）
+      size: ev.kind === "iron" ? 7 + r() * 9 : 2.5 + r() * 5,
+      rot: r() * Math.PI,
+      vr: (r() - .5) * 9,
+      drag: .8 + r() * .5,
+      kind: ev.kind,
+      gold: r()
+    });
+  }
+  return { ev, parts: arr };
+});
+
+function tri(p, x, y, size, rot, style) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rot);
+  ctx.fillStyle = style;
+  ctx.beginPath();
+  ctx.moveTo(size, 0);
+  ctx.lineTo(-size * .6, size * .55);
+  ctx.lineTo(-size * .6, -size * .55);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+/* 冷铁屑：细长条沿运动方向飞，像崩断的链节碎段；
+   少数为红热余烬（断口残温），随生命快速冷却变暗。 */
+function sliver(p, x, y, size, rot, style) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rot);
+  ctx.fillStyle = style;
+  ctx.fillRect(-size, -size * .16, size * 2, size * .32);
+  ctx.restore();
+}
+
+function drawBursts(t) {
+  for (const { ev, parts } of burstParts) {
+    const age = t - ev.t;
+    if (age < 0 || age > ev.life) continue;
+    const fade = 1 - age / ev.life;
+    // 爆点：锁扣事件对齐心口锁扣，其余默认屏心
+    const cx = ev.cx ?? W / 2, cy = ev.cy ?? H / 2;
+    for (const p of parts) {
+      const e = 1 - Math.exp(-p.drag * age);
+      const x = cx + Math.cos(p.ang) * p.v * e / p.drag * .55;
+      const y = cy + Math.sin(p.ang) * p.v * e / p.drag * .55 + 60 * age * age;
+      const rot = p.rot + p.vr * age;
+      if (p.kind === "iron") {
+        if (p.gold < .2) {
+          // 红热余烬：暖橙，生命前半即冷却
+          const ember = fade * (1 - age * 1.1);
+          if (ember <= 0) continue;
+          sliver(p, x, y, p.size * (.6 + fade * .55), rot,
+              `rgba(255,${Math.round(96 + 40 * p.gold)},52,${ember.toFixed(3)})`);
+        } else {
+          // 冷铁屑：冷白亮灰，金属反光
+          const sh = Math.round(196 + 26 * p.gold);
+          sliver(p, x, y, p.size * (.7 + fade * .6), rot,
+              `rgba(${sh},${Math.round(sh + 8)},${Math.round(sh + 22)},${fade.toFixed(3)})`);
+        }
+      } else {
+        tri(p, x, y, p.size * (.5 + fade * .7), rot,
+            `rgba(230,${Math.round(40 + 80 * p.gold)},26,${(fade * .9).toFixed(3)})`);
+      }
+    }
+  }
+}
+
+function drawRing(t) {
+  // 落底冲击波：细、柔、快（避免像魔法阵），自屏心扩张消隐
+  const age = t - 31.84;
+  if (age < 0 || age > .72) return;
+  const r = age * 2200;
+  const k = 1 - age / .72;
+  const a = k * .26;
+  ctx.lineWidth = 2 + 7 * k;
+  ctx.strokeStyle = `rgba(230,90,50,${a.toFixed(3)})`;
+  ctx.beginPath();
+  ctx.arc(W / 2, H / 2 + 60, r, 0, 6.283);
+  ctx.stroke();
+}
+
+/* ===== 血色玫瑰：真空静默剥离 → 爆点粉碎炸开 → 红雾凝链 =====
+   18.25（全局72.18）真空谷底：花瓣失去附着力，死寂中缓慢剥离外翻；
+   18.75（72.68）「砕いて」全频粉碎——三层粒子高速径向炸开：
+   主花瓣（贝塞尔花瓣片+立体翻转）/ 碎瓣尖（最快最利）/ 火星（亮点拖尾），
+   叠双冲击环 + 放射速度线 + 爆心局部强闪 + 红雾快胀（凝链接管）。 */
+const ROSE_BIRTH = 18.25, ROSE_SHOCK = 18.75;
+const ROSE_CX = 905, ROSE_CY = 450;
+
+// 主花瓣 64：真空期剥离，爆点高速炸散
+const PETAL_N = 64;
+// 碎瓣尖 36：爆点专属，最快最利的小三角
+const SHARD_N = 36;
+// 火星 48：爆点专属，暖亮点 + 运动拖尾，短命
+const SPARK_N = 48;
+
+const roseParts = (() => {
+  const petals = [], shards = [], sparks = [];
+  const rp = mulberry32(77), rs = mulberry32(78), rk = mulberry32(79);
+  for (let i = 0; i < PETAL_N; i++) {
+    petals.push({
+      a1: rp() * Math.PI * 2,
+      spd1: 30 + rp() * 170,            // 真空剥离速度
+      lift: 6 + rp() * 22,
+      a2scatter: (rp() - .5) * .5,
+      spd2: 900 + rp() * 1300,           // 炸裂初速（旧 420-1140）
+      drag: 2.1 + rp() * 1.3,            // 强阻尼：几帧内冲出大半场
+      size: 5 + rp() * 11,
+      rot: rp() * Math.PI * 2,
+      vr: (rp() - .5) * 18,
+      flip: rp() * 6.283, flspd: 6 + rp() * 12,   // 立体翻转
+      bright: rp(),
+      long: rp() > .8
+    });
+  }
+  for (let i = 0; i < SHARD_N; i++) {
+    shards.push({
+      ang: rs() * Math.PI * 2,
+      spd: 1500 + rs() * 1500,
+      drag: 2.6 + rs() * 1.6,
+      size: 3 + rs() * 6,
+      rot: rs() * Math.PI * 2,
+      vr: (rs() - .5) * 22,
+      bright: rs(),
+      life: .5 + rs() * .4
+    });
+  }
+  for (let i = 0; i < SPARK_N; i++) {
+    sparks.push({
+      ang: rk() * Math.PI * 2,
+      spd: 1700 + rk() * 1700,
+      drag: 3.4 + rk() * 2.0,
+      rad: 1.2 + rk() * 1.8,
+      trail: 10 + rk() * 22,
+      life: .28 + rk() * .42
+    });
+  }
+  return { petals, shards, sparks };
+})();
+
+// 放射速度线：18 道固定角度（均匀分布 + 种子微抖）
+const RAYS18 = (() => {
+  const r = mulberry32(81);
+  const arr = [];
+  for (let i = 0; i < 18; i++) {
+    arr.push({ ang: i / 18 * Math.PI * 2 + (r() - .5) * .12, w: 2 + r() * 2.2 });
+  }
+  return arr;
+})();
+
+function drawRoseMist(t) {
+  // 主雾：炸开瞬间快胀、亮（.6s）
+  const age = t - ROSE_SHOCK;
+  if (age >= 0 && age < .6) {
+    const r = 130 + age * 1150;
+    const a = .62 * Math.exp(-age / .28);
+    const g = ctx.createRadialGradient(ROSE_CX, ROSE_CY, 0, ROSE_CX, ROSE_CY, r);
+    g.addColorStop(0, `rgba(190,26,38,${(a * .92).toFixed(3)})`);
+    g.addColorStop(.5, `rgba(138,12,22,${(a * .48).toFixed(3)})`);
+    g.addColorStop(1, "rgba(80,4,10,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(ROSE_CX, ROSE_CY, r, 0, 6.283);
+    ctx.fill();
+  }
+  // 余雾：大范围暗血气在笼心缓慢翻涌，让锁链从「活的雾」里凝出而非凭空出现；
+  // 断扣前缓收（red-veil 随后接管全场红雾）
+  const e = age - .2;
+  if (e >= 0 && e < 3.0) {
+    const grow = smooth(0, .45, e);
+    const shrink = 1 - .5 * smooth(1.7, 2.85, e);
+    const r = Math.max(1, (640 + 90 * Math.sin(t * 1.9) + 55 * Math.sin(t * 3.1 + 1))
+                   * grow * shrink);
+    const a = (.23 + .045 * Math.sin(t * 2.4 + .7)) * smooth(0, .35, e)
+              * (1 - smooth(2.55, 3.0, e));
+    if (a > .003) {
+      const g = ctx.createRadialGradient(CONV_CX, CONV_CY, 0, CONV_CX, CONV_CY, r);
+      g.addColorStop(0, `rgba(158,20,32,${a.toFixed(3)})`);
+      g.addColorStop(.6, `rgba(116,11,19,${(a * .55).toFixed(3)})`);
+      g.addColorStop(1, "rgba(70,4,10,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(CONV_CX, CONV_CY, r, 0, 6.283);
+      ctx.fill();
+    }
+  }
+}
+
+/* 爆裂光学：爆心局部强闪 + 双冲击环 + 放射速度线 + 两次回响环（全部局部、短命，
+   不做全屏闪——避免在 hot grade 下变酒红雾） */
+function drawShock(t) {
+  const a = t - ROSE_SHOCK;
+  if (a < 0 || a > .86) return;
+  // 爆心局部强闪：.11s 指数退净
+  if (a < .3) {
+    const r = 80 + a * 1500, fa = .95 * Math.exp(-a / .105);
+    const g = ctx.createRadialGradient(ROSE_CX, ROSE_CY, 0, ROSE_CX, ROSE_CY, r);
+    g.addColorStop(0, `rgba(255,228,200,${fa.toFixed(3)})`);
+    g.addColorStop(.28, `rgba(255,120,72,${(fa * .6).toFixed(3)})`);
+    g.addColorStop(.6, `rgba(220,36,28,${(fa * .25).toFixed(3)})`);
+    g.addColorStop(1, "rgba(160,10,16,0)");
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(ROSE_CX, ROSE_CY, r, 0, 6.283);
+    ctx.fill();
+    ctx.restore();
+  }
+  // 主冲击环：细、亮、极快
+  if (a < .30) {
+    const k = 1 - a / .30;
+    ctx.strokeStyle = `rgba(255,132,92,${(.62 * k).toFixed(3)})`;
+    ctx.lineWidth = 3 + 9 * k;
+    ctx.beginPath();
+    ctx.arc(ROSE_CX, ROSE_CY, 40 + a * 3600, 0, 6.283);
+    ctx.stroke();
+  }
+  // 次环：暗、粗、滞后 .05s
+  const a2 = a - .05;
+  if (a2 >= 0 && a2 < .42) {
+    const k2 = 1 - a2 / .42;
+    ctx.strokeStyle = `rgba(168,16,24,${(.30 * k2).toFixed(3)})`;
+    ctx.lineWidth = 8 + 22 * k2;
+    ctx.beginPath();
+    ctx.arc(ROSE_CX, ROSE_CY, a2 * 2500, 0, 6.283);
+    ctx.stroke();
+  }
+  // 放射速度线：.15s 急闪
+  if (a < .15) {
+    const k3 = 1 - a / .15;
+    const r0 = a * 3000, r1 = r0 + 220 + 300 * k3;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.lineCap = "round";
+    for (const r of RAYS18) {
+      ctx.strokeStyle = `rgba(255,182,152,${(.66 * k3).toFixed(3)})`;
+      ctx.lineWidth = r.w;
+      ctx.beginPath();
+      ctx.moveTo(ROSE_CX + Math.cos(r.ang) * r0, ROSE_CY + Math.sin(r.ang) * r0);
+      ctx.lineTo(ROSE_CX + Math.cos(r.ang) * r1, ROSE_CY + Math.sin(r.ang) * r1);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  // 两次回响冲击波（.20/.52，与镜头回响震同拍）：暗红、柔、滞后
+  for (const dt0 of [.20, .52]) {
+    const ae = a - dt0;
+    if (ae >= 0 && ae < .34) {
+      const k4 = 1 - ae / .34;
+      ctx.strokeStyle = `rgba(214,48,34,${(.26 * k4).toFixed(3)})`;
+      ctx.lineWidth = 2 + 6 * k4;
+      ctx.beginPath();
+      ctx.arc(ROSE_CX, ROSE_CY, ae * 1600, 0, 6.283);
+      ctx.stroke();
+    }
+  }
+}
+
+/* ===== 红雾收束成链（73.08→74.83）：炸开的血色沿螺旋轨迹被抽回笼心，
+   汇入锁扣红色光点——母题物质守恒：碎开的红不是消失，而是凝练成铁。 ===== */
+const CONV_T0 = 19.15, CONV_T1 = 20.9;
+const CONV_CX = 883, CONV_CY = 440;       // 对齐 c1-shot2 锁扣光点
+const CONV_N = 66;
+const convergers = (() => {
+  const r = mulberry32(83);
+  const arr = [];
+  for (let i = 0; i < CONV_N; i++) {
+    arr.push({
+      a0: r() * Math.PI * 2,
+      r0: 300 + r() * 540,
+      delay: r() * .55,
+      dur: .75 + r() * .75,
+      swirl: (r() - .5) * 4.6,
+      rad: 2.2 + r() * 2.6,
+      trail: 20 + r() * 30,
+      lift: (r() - .5) * 80,
+      warm: r()
+    });
+  }
+  return arr;
+})();
+
+function drawConverge(t) {
+  if (t < CONV_T0 || t > CONV_T1) return;
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  ctx.lineCap = "round";
+  for (const p of convergers) {
+    const k = (t - CONV_T0 - p.delay) / p.dur;
+    if (k <= 0 || k >= 1) continue;
+    const pos = (kk) => {
+      const ang = p.a0 + p.swirl * kk;
+      const rad = p.r0 * Math.pow(1 - kk, 1.5);
+      return [
+        CONV_CX + Math.cos(ang) * rad,
+        CONV_CY + Math.sin(ang) * rad + p.lift * kk
+      ];
+    };
+    const [x, y] = pos(k);
+    const [x2, y2] = pos(Math.max(0, k - .05));
+    // 全程保持高亮，最后 .12 急溶进光点
+    const fade = 1 - smooth(.88, 1, k);
+    const alpha = (.85 + .15 * Math.sin(k * 9 + p.a0)) * fade;
+    // 越近笼心越暖：血红 → 金红（汇入白热光点）
+    const w = smooth(.4, 1, k);
+    const rr = Math.round(224 + 31 * w);
+    const gg = Math.round(44 + 160 * w * (.5 + .5 * p.warm));
+    const lg = ctx.createLinearGradient(x2, y2, x, y);
+    lg.addColorStop(0, `rgba(${rr},${Math.min(255, gg)},44,0)`);
+    lg.addColorStop(1, `rgba(${rr},${Math.min(255, gg)},48,${alpha.toFixed(3)})`);
+    ctx.strokeStyle = lg;
+    ctx.lineWidth = p.rad * 1.7;
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    ctx.fillStyle = `rgba(255,${Math.min(255, Math.round(160 + 85 * w))},128,${(alpha * .95).toFixed(3)})`;
+    ctx.beginPath();
+    ctx.arc(x, y, p.rad * (1.35 - .4 * w), 0, 6.283);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+// 贝塞尔花瓣片（纵向卵圆尖，根部窄、顶部圆）
+function petalPath(ctx, size) {
+  ctx.beginPath();
+  ctx.moveTo(0, -size);
+  ctx.bezierCurveTo(size * .92, -size * .35, size * .72, size * .72, 0, size);
+  ctx.bezierCurveTo(-size * .72, size * .72, -size * .92, -size * .35, 0, -size);
+  ctx.closePath();
+}
+
+function drawPetals(t) {
+  drawRoseMist(t);
+  drawShock(t);
+  const age1 = t - ROSE_BIRTH;
+  if (age1 < 0) return;
+  const { petals, shards, sparks } = roseParts;
+
+  // —— 主花瓣：真空剥离 → 爆点高速炸散（带立体翻转与重力）——
+  for (const p of petals) {
+    let x, y, a, alpha;
+    if (t < ROSE_SHOCK) {
+      // 阶段一：死寂中缓慢剥离外翻 + 上浮（蓄力的 0.5s）
+      a = age1;
+      x = ROSE_CX + Math.cos(p.a1) * p.spd1 * a;
+      y = ROSE_CY + Math.sin(p.a1) * p.spd1 * a - p.lift * a;
+      alpha = Math.min(.92, age1 * 4);
+    } else {
+      // shock 瞬间剥离位置作为弹道起点，沿原方向被轰飞
+      const x1 = ROSE_CX + Math.cos(p.a1) * p.spd1 * .5;
+      const y1 = ROSE_CY + Math.sin(p.a1) * p.spd1 * .5 - p.lift * .5;
+      a = t - ROSE_SHOCK;
+      const base = Math.atan2(y1 - ROSE_CY, x1 - ROSE_CX);
+      const a2 = base + p.a2scatter;
+      const e = (1 - Math.exp(-p.drag * a)) / p.drag;
+      x = x1 + Math.cos(a2) * p.spd2 * e * 1.02;
+      y = y1 + Math.sin(a2) * p.spd2 * e * 1.02 + 130 * a * a;
+      const life = p.long ? 1.5 : .95;
+      if (a > life) continue;
+      alpha = .95 * (1 - smooth(life * .55, life, a));
+    }
+    // 三档血色：暗红 / 血红 / 亮血红
+    let rr, gg;
+    if (p.bright < .35) { rr = 150; gg = 14; }
+    else if (p.bright < .75) { rr = 205; gg = 26; }
+    else { rr = 238; gg = 66; }
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(p.rot + p.vr * a);
+    // 立体翻转：周期水平镜像，翻转到侧面时压窄
+    const fl = Math.cos(a * p.flspd + p.flip);
+    ctx.scale(Math.sign(fl) * Math.max(.18, Math.abs(fl)), 1);
+    ctx.fillStyle = `rgba(${rr},${gg},28,${alpha.toFixed(3)})`;
+    petalPath(ctx, p.size);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // —— 碎瓣尖：最快最利，高温橙红 ——
+  if (t >= ROSE_SHOCK) {
+    const a = t - ROSE_SHOCK;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    for (const p of shards) {
+      if (a > p.life) continue;
+      const e = (1 - Math.exp(-p.drag * a)) / p.drag;
+      const x = ROSE_CX + Math.cos(p.ang) * p.spd * e * 1.02;
+      const y = ROSE_CY + Math.sin(p.ang) * p.spd * e * 1.02 + 200 * a * a;
+      const alpha = (1 - smooth(p.life * .5, p.life, a));
+      const rr = p.bright > .5 ? 255 : 238;
+      const gg = p.bright > .5 ? 128 : 60;
+      tri(p, x, y, p.size * (.7 + a * .5), p.rot + p.vr * a,
+          `rgba(${rr},${gg},34,${alpha.toFixed(3)})`);
+    }
+    // —— 火星：亮点 + 沿弹道拖尾 ——
+    for (const p of sparks) {
+      if (a > p.life) continue;
+      const e = (1 - Math.exp(-p.drag * a)) / p.drag;
+      const x = ROSE_CX + Math.cos(p.ang) * p.spd * e;
+      const y = ROSE_CY + Math.sin(p.ang) * p.spd * e + 90 * a * a;
+      const vx = Math.cos(p.ang) * p.spd * Math.exp(-p.drag * a);
+      const vy = Math.sin(p.ang) * p.spd * Math.exp(-p.drag * a);
+      const sp = Math.max(1, Math.hypot(vx, vy));
+      const ux = vx / sp, uy = vy / sp;
+      const alpha = 1 - smooth(p.life * .45, p.life, a);
+      const lg = ctx.createLinearGradient(x, y, x - ux * p.trail, y - uy * p.trail);
+      lg.addColorStop(0, `rgba(255,226,168,${(.9 * alpha).toFixed(3)})`);
+      lg.addColorStop(1, "rgba(255,110,52,0)");
+      ctx.strokeStyle = lg;
+      ctx.lineWidth = p.rad * 1.3;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x - ux * p.trail, y - uy * p.trail);
+      ctx.stroke();
+      ctx.fillStyle = `rgba(255,238,196,${alpha.toFixed(3)})`;
+      ctx.beginPath();
+      ctx.arc(x, y, p.rad * 1.5, 0, 6.283);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+/* ===== 红色浸染（右下→全屏，72.68→85.77 铺满，红庭接班后淡出）===== */
+const redVeil = document.getElementById("red-veil");
+const redWash = document.getElementById("red-wash");
+const redBase = document.getElementById("red-base");
+const RED_T0 = 18.75, RED_T1 = 31.84;
+function drawRedVeil(t) {
+  if (!redVeil) return;
+  if (t < RED_T0 - .3 || t > 33.4) {
+    redVeil.style.opacity = 0;
+    if (redWash) redWash.style.opacity = 0;
+    if (redBase) redBase.style.opacity = 0;
+    return;
+  }
+  // 前期蔓延要看得见：对 smooth 进度做 .72 次幂（前快后稳），
+  // 起点 .5 让血雾一出生就在屏内右下角成团，终点 1.3 略溢出保证铺满无死角。
+  // 淡入只给 1.45s（20.2=74.13）：72.68 炸开后血雾必须立刻成团，不能让观众空等
+  const k = Math.pow(smooth(RED_T0, RED_T1, t), .72);
+  const sc = .5 + .8 * k;
+  const op = .80 * smooth(RED_T0, 20.2, t) * (1 - smooth(31.84, 33.3, t));
+  redVeil.style.transform = `scale(${sc.toFixed(4)})`;
+  redVeil.style.opacity = op.toFixed(3);
+  // 漫天血气：78.6s（局部24.7）后才缓起，落底前到 .55，与三团斑同步淡出
+  if (redWash) {
+    const wop = .55 * smooth(24.7, 31.6, t) * (1 - smooth(31.84, 33.3, t));
+    redWash.style.opacity = wop.toFixed(3);
+  }
+  // 全屏暗血红托底：82.43 起涨、85.63 铺满，红庭 85.52 淡入后于 87.33 前退净
+  if (redBase) {
+    const bop = .55 * smooth(28.5, 31.7, t) * (1 - smooth(31.9, 33.4, t));
+    redBase.style.opacity = bop.toFixed(3);
+  }
+}
+
+function drawVeil(t) {
+  // 63.51 半透扫切：白纱自左 -30% 扫到右 115%，0.55s
+  const s1 = smooth(9.58, 10.18, t);
+  if (s1 > 0 && s1 < 1) {
+    const x = -0.5 + s1 * 1.75;
+    veil.style.transform = `translateX(${(x * W).toFixed(0)}px) skewX(-8deg)`;
+    veil.style.opacity = (Math.sin(s1 * Math.PI) * .85).toFixed(3);
+    return;
+  }
+  // 65.45 全遮：0.5s 内全屏近白（换演员）
+  const v2 = smooth(11.48, 11.66, t) * (1 - smooth(11.88, 12.08, t));
+  if (v2 > 0) {
+    veil.style.transform = "translateX(300px) skewX(-8deg)";
+    veil.style.opacity = (v2 * .97).toFixed(3);
+    return;
+  }
+  veil.style.opacity = 0;
+}
+
+function draw(t) {
+  ctx.clearRect(0, 0, W, H);
+  drawBursts(t);
+  drawRing(t);
+  drawPetals(t);
+  drawConverge(t);
+  drawRedVeil(t);
+  drawVeil(t);
+
+  // 全屏闪光（多事件高斯核叠加，同色近似相加）
+  let r = 0, g = 0, b = 0, peak = 0;
+  for (const [tt, amp, fast, tail, cr, cg, cb] of FLASHES) {
+    const u = t - tt;
+    if (u < 0 || u > fast + tail) continue;
+    const e = u < fast ? 1 - smooth(0, fast, u) * .25
+                       : Math.exp(-(u - fast) / tail * 3);
+    const a = amp * e;
+    r = Math.max(r, cr); g = Math.max(g, cg); b = Math.max(b, cb);
+    peak = Math.max(peak, a);
+  }
+  flash.style.background = `rgb(${r},${g},${b})`;
+  flash.style.opacity = peak.toFixed(3);
+}
+
+const state = { t: 0 };
+tl.to(state, { t: 53.35, duration: 53.35, ease: "none",
+               onUpdate: () => draw(state.t) }, 0);
+draw(0);
+</script>
+</body>
+</html>

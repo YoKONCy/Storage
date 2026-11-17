@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Verse1 Shot1 — 硝子の薔薇を 手のひらに抱いて (38.05) 剪影版</title>
+<script src="assets/vendor/gsap.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: transparent; overflow: hidden; }
+  .clip { position: absolute; }
+
+  #root { width: 1920px; height: 1080px; overflow: hidden; }
+
+  /* ===== 剪影语言标准结构 =====
+     .sil  实体压成近黑块，保留极少体积
+     .rim  烘焙边缘光，screen 混合；主光侧亮，对侧仅一丝环境反光 */
+  .actor { position: absolute; will-change: opacity, transform, filter; }
+  .actor img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: contain;
+  }
+  .sil { filter: brightness(.13) saturate(.25) contrast(1.5); }
+  .rim { mix-blend-mode: screen; }
+
+  /* 同步世界层缓推的运动容器（transform-origin 与 env-plate 完全一致） */
+  #girl-world {
+    inset: 0;
+    transform-origin: 46% 42%;
+    will-change: transform, opacity;
+  }
+
+  /* 少女 A1：面朝右立于中殿偏左，左侧尖拱窗光给 rimL */
+  #girl-actor {
+    width: 571px; height: 860px;
+    left: 335px; top: 140px;
+  }
+
+  /* 玻璃蔷薇：凝现在她捧于胸前的双手之间（同位置形态叠化，不出现第二朵花） */
+  #glass-actor {
+    width: 300px; height: 380px;
+    left: 511px; top: 123px;
+    opacity: 0;
+  }
+  #glass-actor .sil {
+    filter: brightness(.08) saturate(.4) contrast(1.6);
+  }
+
+  /* 掌心最后一点红：随玻璃化熄灭（母题从血肉之红转为冷之玻璃） */
+  #palm-red {
+    width: 170px; height: 170px;
+    left: 570px; top: 253px;
+    border-radius: 50%;
+    background: radial-gradient(circle,
+      rgba(120,14,30,.5) 0%, rgba(70,8,18,.2) 55%, rgba(0,0,0,0) 100%);
+    mix-blend-mode: screen;
+  }
+
+  /* intro 白闪余韵 */
+  #flash {
+    inset: 0;
+    background: #fff;
+  }
+</style>
+</head>
+<body>
+  <div id="root"
+       data-composition-id="v1-shot1"
+       data-width="1920"
+       data-height="1080">
+
+    <div id="girl-world" class="clip"
+         data-start="0" data-duration="4.36" data-track-index="0"
+         data-layout-ignore>
+
+      <div id="girl-actor" class="clip actor">
+        <img class="sil" src="assets/images/girl-fullbody.png" alt="">
+        <img class="rim" id="rimL" src="assets/rim/girl-fullbody-rimL.png" alt="">
+        <img class="rim" id="rimR" src="assets/rim/girl-fullbody-rimR.png" alt="">
+      </div>
+
+      <div id="palm-red" class="clip"
+           data-start="0" data-duration="4.36" data-track-index="1"
+           data-layout-ignore></div>
+
+      <div id="glass-actor" class="clip actor"
+           data-start="0" data-duration="4.36" data-track-index="2">
+        <img class="sil" src="assets/images/rose-glass.png" alt="">
+        <img class="rim" id="glass-rimL" src="assets/rim/rose-glass-rimL.png" alt="">
+        <img class="rim" id="glass-rimR" src="assets/rim/rose-glass-rimR.png" alt="">
+      </div>
+    </div>
+
+    <div id="flash" class="clip"
+         data-start="0" data-duration="4.36" data-track-index="8"></div>
+  </div>
+
+<script>
+/* 局部 0-4.36s（全局 38.0-42.36）
+   白闪退去，少女轮廓自窗光中凝出；2.35s 玻璃蔷薇在她捧起的双手间凝形
+   （冷 rim 自下而上亮起），掌心红光同时熄灭；
+   4.05s 人物随涟漪溶出，切点交给涟漪过渡层。
+   #girl-world 复刻 env 层 0-4.36s 的缓推曲线，人物与世界零差速。 */
+window.__timelines = window.__timelines || {};
+const tl = gsap.timeline({ paused: true });
+window.__timelines["v1-shot1"] = tl;
+
+const world = document.getElementById("girl-world");
+const girl = document.getElementById("girl-actor");
+const rimL = document.getElementById("rimL");
+const rimR = document.getElementById("rimR");
+const glass = document.getElementById("glass-actor");
+const glassRimL = document.getElementById("glass-rimL");
+const glassRimR = document.getElementById("glass-rimR");
+const palmRed = document.getElementById("palm-red");
+const flash = document.getElementById("flash");
+
+// 与 env-plate 完全同步的缓推（其 15.93s 线性 tween 的前 4.36s 段）
+gsap.set(world, { scale: 1.06, x: 10 });
+tl.to(world, { scale: 1.079, x: 2.34, duration: 4.36, ease: "none" }, 0);
+
+// 白闪
+gsap.set(flash, { opacity: .9 });
+tl.to(flash, { opacity: 0, duration: 0.42, ease: "power2.out" }, 0);
+
+// 少女：rim 先于实体自窗光中凝出
+gsap.set(girl, { opacity: 0 });
+gsap.set(rimL, { opacity: 0 });
+gsap.set(rimR, { opacity: 0 });
+tl.to(rimL, { opacity: .78, duration: .75, ease: "power2.out" }, 0.15)
+  .to(rimR, { opacity: .16, duration: .8, ease: "power2.out" }, 0.25)
+  .to(girl, { opacity: 1, duration: .8, ease: "power2.out" }, 0.3);
+
+// 掌心红光微弱呼吸后熄灭
+gsap.set(palmRed, { opacity: .9, scale: 1 });
+tl.to(palmRed, { opacity: .35, scale: .92, duration: 1.8, ease: "sine.inOut" }, 0.5)
+  .to(palmRed, { opacity: 0, scale: .6, duration: .8, ease: "power2.in" }, 2.5);
+
+// 玻璃蔷薇凝形：实体由虚到实（近黑），rim 自下而上分段亮起
+gsap.set(glass, { opacity: 0, scale: 1.06, filter: "blur(10px)" });
+gsap.set(glassRimL, { opacity: 0 });
+gsap.set(glassRimR, { opacity: 0 });
+tl.to(glass, { opacity: 1, scale: 1, filter: "blur(0px)",
+               duration: .7, ease: "power2.out" }, 2.35)
+  .to(glassRimL, { opacity: .95, duration: .5, ease: "power2.out" }, 2.55)
+  .to(glassRimR, { opacity: .22, duration: .6, ease: "power2.out" }, 2.9)
+  // 凝形后的冷光轻颤
+  .to(glassRimL, { opacity: .7, duration: .35, yoyo: true, repeat: 3,
+              ease: "sine.inOut" }, 3.2);
+
+// 涟漪转场：人物世界溶出（env 同步压暗，镜2 肖像在涟漪中凝现）
+tl.to(world, { opacity: 0, duration: .31, ease: "power2.inOut" }, 4.05);
+</script>
+</body>
+</html>

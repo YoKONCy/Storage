@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Verse1 Shot3 — あなたの名前 古書に封じて (46.11) 剪影版</title>
+<script src="assets/vendor/gsap.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: transparent; overflow: hidden; }
+  .clip { position: absolute; }
+
+  #root { width: 1920px; height: 1080px; overflow: hidden; }
+
+  .actor { position: absolute; will-change: opacity, transform; }
+  .actor img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: contain;
+  }
+  .sil { filter: brightness(.12) saturate(.25) contrast(1.5); }
+  .rim { mix-blend-mode: screen; }
+
+  /* 石祭坛：画面右下，一块暗色石台（接住古书） */
+  #altar {
+    left: 640px; top: 700px;
+    width: 1180px; height: 220px;
+    background:
+      linear-gradient(180deg, rgba(28,32,44,.5) 0%, rgba(8,10,16,.85) 40%, rgba(3,4,8,1) 100%);
+    border-radius: 50% 50% 8px 8px / 36% 36% 8px 8px;
+    filter: blur(.5px);
+  }
+  #altar::after {
+    content: "";
+    position: absolute;
+    left: 6%; right: 6%; top: 0;
+    height: 2px;
+    background: linear-gradient(90deg,
+      rgba(0,0,0,0), rgba(150,175,220,.16) 40%,
+      rgba(150,175,220,.2) 60%, rgba(0,0,0,0));
+  }
+
+  /* 少女 A5 背影：立于左侧暗处、望向祭坛深处的见证人。
+     图比例 1360:2048=.664，裙摆向两侧展开，盒子按比例贴合 */
+  #witness {
+    width: 571px; height: 860px;
+    left: 135px; top: 170px;
+    opacity: 0;
+  }
+  #witness .sil {
+    filter: brightness(.13) saturate(.2) contrast(1.45);
+  }
+  #witness .rim { opacity: .42; }
+  #witness #witness-rimR { opacity: .13; }
+
+  /* 古书 */
+  #book-actor {
+    width: 560px; height: 560px;
+    left: 1010px; top: 250px;
+    opacity: 0;
+  }
+
+  /* 封蜡红光点（全片至此唯一的红）：随钢琴琶音多次呼吸，不再只闪一下 */
+  #seal-pulse {
+    width: 190px; height: 190px;
+    left: 1195px; top: 515px;
+    border-radius: 50%;
+    background: radial-gradient(circle,
+      rgba(186,24,42,.85) 0%,
+      rgba(140,14,30,.42) 40%,
+      rgba(70,8,16,.12) 68%,
+      rgba(0,0,0,0) 100%);
+    mix-blend-mode: screen;
+    opacity: 0;
+    will-change: opacity, transform;
+  }
+  /* 第二拍「盖下」时的细冲击波环（替代旧的整块脉冲缩放） */
+  #seal-ring {
+    width: 130px; height: 130px;
+    left: 1225px; top: 545px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(190,40,52,.55);
+    mix-blend-mode: screen;
+    opacity: 0;
+  }
+</style>
+</head>
+<body>
+  <div id="root"
+       data-composition-id="v1-shot3"
+       data-width="1920"
+       data-height="1080">
+
+    <div id="altar" class="clip"
+         data-start="0" data-duration="5.11" data-track-index="1"
+         data-layout-ignore></div>
+
+    <div id="witness" class="clip actor"
+         data-start="0" data-duration="5.11" data-track-index="2">
+      <img class="sil" src="assets/images/girl-back.png" alt="">
+      <img class="rim" id="witness-rimL" src="assets/rim/girl-back-rimL.png" alt="">
+      <img class="rim" id="witness-rimR" src="assets/rim/girl-back-rimR.png" alt="">
+    </div>
+
+    <div id="book-actor" class="clip actor"
+         data-start="0" data-duration="5.11" data-track-index="3">
+      <img class="sil" src="assets/images/book-seal.png" alt="">
+      <img class="rim" id="book-rim" src="assets/rim/book-seal-rimL.png" alt="">
+    </div>
+
+    <div id="seal-pulse" class="clip"
+         data-start="0" data-duration="5.11" data-track-index="4"
+         data-layout-ignore></div>
+    <div id="seal-ring" class="clip"
+         data-start="0" data-duration="5.11" data-track-index="4"
+         data-layout-ignore></div>
+  </div>
+
+<script>
+/* 局部 0-5.11s（全局 46.11-51.22）
+   柱影扫过后：见证人在左、祭坛古书在右，空间同框；
+   镜头缓推向封印；2.9s「封じて」封蜡盖下——红冲+书震，见证人纹丝不动。 */
+window.__timelines = window.__timelines || {};
+const tl = gsap.timeline({ paused: true });
+window.__timelines["v1-shot3"] = tl;
+
+const witness = document.getElementById("witness");
+const book = document.getElementById("book-actor");
+const bookRim = document.getElementById("book-rim");
+const seal = document.getElementById("seal-pulse");
+const sealRing = document.getElementById("seal-ring");
+
+// 柱影在 0~0.35s 扫过，元素由其遮挡自然显现
+gsap.set(witness, { opacity: 0, x: -12 });
+gsap.set(book, { opacity: 0, scale: .98, transformOrigin: "50% 50%" });
+gsap.set(bookRim, { opacity: .6 });
+tl.to(witness, { opacity: 1, x: 0, duration: 1.0, ease: "power2.out" }, 0.15)
+  .to(book, { opacity: 1, scale: 1.0, duration: .7, ease: "power2.out" }, 0.25)
+  .to(book, { scale: 1.1, duration: 3.9, ease: "none" }, 0.95);
+
+// 封蜡红光：钢琴琶音三连音（声学核实 48.82/49.08/49.36 → 局部 2.71/2.97/3.25，
+// 强度 1.14/1.02/.56 渐弱）点亮封蜡并多次呼吸，50.46（局部 4.35）一颗回光后熄灭。
+// 第二拍即「封じて」盖下：书震 + 细冲击波环。纯函数驱动，seek 安全。
+const smooth = (a, b, x) => {
+  const k = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return k * k * (3 - 2 * k);
+};
+// 琶音脉冲 [时刻, 峰值, 衰减时间常数]（单边指数，像琴音起音+混响尾）
+const PLUCKS = [[2.71, 1.0, .15], [2.97, .95, .15], [3.25, .52, .16], [4.35, .6, .18]];
+const glow = { t: 0 };
+tl.to(glow, {
+  t: 5.11, duration: 5.11, ease: "none",
+  onUpdate: () => {
+    const t = glow.t;
+    let g = 0;
+    for (const [pt, a, tau] of PLUCKS) {
+      const d = t - pt;
+      if (d >= 0 && d < .7) g = Math.max(g, a * Math.exp(-d / tau));
+    }
+    // 呼吸窗：第一颗音前黑、末颗回光尾后灭；窗内脉冲之间保留微弱底光
+    const win = smooth(2.66, 2.78, t) * (1 - smooth(4.62, 4.92, t));
+    const op = win * (.10 + .52 * g);
+    seal.style.opacity = op.toFixed(3);
+    seal.style.transform = `scale(${(1 + .13 * g).toFixed(4)})`;
+  }
+}, 0);
+
+// 第二拍「盖下」：古书一沉 + rim 一颤 + 封蜡细环扩散
+tl.to(book, { y: 5, duration: .06, ease: "none" }, 2.97)
+  .to(book, { y: 0, duration: .42, ease: "power2.out" }, 3.03);
+tl.to(bookRim, { opacity: .42, duration: .1, yoyo: true, repeat: 1,
+                 ease: "power2.out" }, 2.97);
+gsap.set(sealRing, { opacity: 0, scale: .55, transformOrigin: "50% 50%" });
+tl.to(sealRing, { opacity: .6, duration: .05, ease: "none" }, 2.97)
+  .to(sealRing, { scale: 2.3, opacity: 0, duration: .5, ease: "power2.out" }, 2.97);
+</script>
+</body>
+</html>

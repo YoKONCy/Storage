@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>叙事 PV 小样 — 病名为爱（三镜头）</title>
+<script src="assets/vendor/gsap.min.js"></script>
+<style>
+  /* 系统字体显式声明（渲染契约要求） */
+  @font-face { font-family: 'SimSun';   src: local('SimSun'); }
+  @font-face { font-family: 'Consolas'; src: local('Consolas'); }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000; overflow: hidden; }
+
+  .clip { position: absolute; }
+
+  #root {
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    background: #000;
+  }
+
+  /* 全屏画布：ECG 波形 / 噪点 / 粒子都在这里画 */
+  #stage {
+    width: 1920px;
+    height: 1080px;
+    left: 0;
+    top: 0;
+  }
+
+  /* 镜头一：监护仪网格底 */
+  #grid {
+    inset: 0;
+    background-color: #020a0c;
+    background-image:
+      linear-gradient(rgba(54, 240, 200, 0.10) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(54, 240, 200, 0.10) 1px, transparent 1px),
+      linear-gradient(rgba(54, 240, 200, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(54, 240, 200, 0.04) 1px, transparent 1px);
+    background-size: 80px 80px, 80px 80px, 16px 16px, 16px 16px;
+  }
+  /* 暗角，让画面四角沉下去 */
+  #vignette {
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.75) 100%);
+  }
+
+  /* HUD 文字 */
+  .hud {
+    font-family: 'Consolas', monospace;
+    color: #36f0c8;
+    letter-spacing: 4px;
+    text-shadow: 0 0 12px rgba(54, 240, 200, 0.55);
+  }
+  #hud-tl { left: 64px;  top: 52px; font-size: 26px; }
+  #hud-bl { left: 64px;  bottom: 52px; font-size: 22px; opacity: 0.75; }
+  #hud-hr { right: 64px; top: 48px; font-size: 30px; text-align: right; }
+  #hud-hr .num  { font-size: 72px; font-weight: bold; display: block; line-height: 1; }
+  #hr-0 { color: #ff2a3d; text-shadow: 0 0 14px rgba(255, 42, 61, 0.8); opacity: 0; }
+
+  /* 中央心形 */
+  #heart-wrap {
+    left: 810px;
+    top: 250px;
+    width: 300px;
+    height: 300px;
+  }
+  #heart {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 0 18px rgba(54, 240, 200, 0.6));
+  }
+
+  /* FLATLINE 警告 */
+  #warn {
+    width: 100%;
+    top: 760px;
+    text-align: center;
+    font-family: 'Consolas', monospace;
+    font-size: 64px;
+    font-weight: bold;
+    letter-spacing: 18px;
+    color: #ff2a3d;
+    text-shadow: 0 0 24px rgba(255, 42, 61, 0.85);
+    opacity: 0;
+  }
+
+  /* 闪白转场 */
+  #flash {
+    inset: 0;
+    background: #fff;
+    opacity: 0;
+  }
+
+  /* 镜头三：红色的"愛" */
+  #ai-char {
+    width: 100%;
+    top: 160px;
+    text-align: center;
+    font-family: 'SimSun', serif;
+    font-size: 620px;
+    line-height: 1.15;
+    color: #d4001a;
+    text-shadow: 0 0 80px rgba(212, 0, 26, 0.45);
+    opacity: 0;
+  }
+  /* 裂纹 SVG 覆盖在愛字上 */
+  #cracks {
+    left: 0;
+    top: 0;
+    width: 1920px;
+    height: 1080px;
+    opacity: 0;
+  }
+  .crack {
+    fill: none;
+    stroke: #000;
+    stroke-width: 8;
+    stroke-linecap: round;
+    stroke-dasharray: 900;
+    stroke-dashoffset: 900;
+    filter: drop-shadow(0 0 6px rgba(0,0,0,0.9));
+  }
+</style>
+</head>
+<body>
+  <div id="root"
+       data-composition-id="narrative-demo"
+       data-width="1920"
+       data-height="1080">
+
+    <!-- ===== 镜头一/二：监护仪网格底（最底层） ===== -->
+    <div id="grid" class="clip"
+         data-start="0" data-duration="9" data-track-index="0"></div>
+
+    <!-- Canvas 常驻 15 秒，所有程序化画面都在 draw(t) 里（网格之上） -->
+    <canvas id="stage" class="clip" width="1920" height="1080"
+            data-start="0" data-duration="15" data-track-index="1"></canvas>
+
+    <div id="hud-tl" class="clip hud"
+         data-start="0" data-duration="8.6" data-track-index="2">ECG · LEAD II · 25mm/s</div>
+    <div id="hud-bl" class="clip hud"
+         data-start="0" data-duration="8.6" data-track-index="2">MONITOR 03 — INTENSIVE CARE UNIT</div>
+    <div id="hud-hr" class="clip hud"
+         data-start="0" data-duration="8.6" data-track-index="2">
+      HR <span id="hr-72" class="num">72</span><span id="hr-0" class="num">0</span>
+    </div>
+
+    <div id="heart-wrap" class="clip"
+         data-start="0" data-duration="8.5" data-track-index="3">
+      <svg id="heart" viewBox="0 0 100 100">
+        <path d="M50 88 C20 66 6 48 6 30 C6 16 17 8 28 8 C37 8 45 14 50 23 C55 14 63 8 72 8 C83 8 94 16 94 30 C94 48 80 66 50 88 Z"
+              fill="none" stroke="#36f0c8" stroke-width="2.5"/>
+      </svg>
+    </div>
+
+    <div id="warn" class="clip"
+         data-start="8.15" data-duration="1.9" data-track-index="4">— FLATLINE —</div>
+
+    <!-- 闪白：8.5s -->
+    <div id="flash" class="clip"
+         data-start="8.45" data-duration="1.1" data-track-index="9"></div>
+
+    <!-- ===== 镜头三：愛（10.2 - 12.6s，随后交给粒子） ===== -->
+    <div id="ai-char" class="clip"
+         data-start="10.2" data-duration="2.4" data-track-index="2">愛</div>
+
+    <svg id="cracks" class="clip" viewBox="0 0 1920 1080"
+         data-start="11.4" data-duration="1.2" data-track-index="5">
+      <!-- 三条从字心向外蔓延的裂纹 -->
+      <path class="crack" d="M960 520 L880 420 L820 300 L770 210"/>
+      <path class="crack" d="M960 520 L1040 430 L1120 380 L1200 300"/>
+      <path class="crack" d="M960 520 L930 640 L950 760 L900 900"/>
+      <path class="crack" d="M960 520 L760 560 L640 600"/>
+    </svg>
+
+    <div id="vignette" class="clip"
+         data-start="0" data-duration="9" data-track-index="8"></div>
+  </div>
+
+<script>
+/* ============================================================
+ * 叙事 PV 小样：心跳 → 骤停 → 愛字崩解
+ * 铁律：画面必须是时间 t 的纯函数（draw(t) 全量重绘），
+ *       渲染器 seek 到任意帧都能得到确定结果。
+ * ============================================================ */
+
+// ---------- 确定性随机（禁止 Math.random） ----------
+function mulberry32(seed) {
+  return function () {
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const canvas = document.getElementById("stage");
+const ctx = canvas.getContext("2d");
+const W = 1920, H = 1080, ECG_Y = 700;
+
+// ---------- ECG 波形合成（高斯半波叠加 QRS 综合波） ----------
+function bump(x, c, w) {
+  const d = (x - c) / w;
+  return Math.exp(-d * d);
+}
+// 一个心跳周期（归一化相位 0..1）内的电压值
+function ecgCycle(ph) {
+  return bump(ph, 0.18, 0.025) * 0.12   // P 波
+       - bump(ph, 0.385, 0.008) * 0.12  // Q
+       + bump(ph, 0.42, 0.010) * 1.00   // R 尖峰
+       - bump(ph, 0.46, 0.012) * 0.28   // S
+       + bump(ph, 0.72, 0.040) * 0.22;  // T 波
+}
+// 心室颤动：多频正弦堆叠
+function vfCycle(x, t, energy) {
+  return energy * (
+      0.14 * Math.sin(x * 0.11 + t * 31)
+    + 0.09 * Math.sin(x * 0.27 - t * 47)
+    + 0.05 * Math.sin(x * 0.53 + t * 63)
+  );
+}
+
+const BPM = 70;
+const BEAT = 60 / BPM;          // 0.857s
+const SPEED = 360;              // 扫描速度 px/s
+const PERIOD_PX = SPEED * BEAT;
+
+// ---------- 颗粒噪点：按帧索引播种，逐帧不同但可复现 ----------
+function drawGrain(frame) {
+  const rng = mulberry32(987654 + frame);
+  ctx.fillStyle = "rgba(180,255,240,0.05)";
+  for (let i = 0; i < 220; i++) {
+    const x = rng() * W, y = rng() * H, s = 1 + rng() * 2;
+    ctx.fillRect(x, y, s, s);
+  }
+}
+
+// ---------- 镜头一/二：ECG ----------
+function drawECG(t, frame) {
+  // 6.5s 起正常波形与室颤混合，7.2s 完全室颤，8.15s 拉平
+  let flat = 0;          // 平直线程度
+  let chaotic = 0;       // 室颤程度
+  if (t >= 6.5) chaotic = Math.min(1, (t - 6.5) / 0.7);
+  if (t >= 8.15) flat = Math.min(1, (t - 8.15) / 0.12);
+
+  // 波形拖影底光（宽而淡）+ 主线（细而亮）
+  const passes = [
+    { width: 9, alpha: 0.12 },
+    { width: 3, alpha: 0.55 },
+    { width: 1.6, alpha: 1.0 }
+  ];
+
+  for (const p of passes) {
+    ctx.beginPath();
+    for (let x = 0; x <= W; x += 2) {
+      const ph = (((x + t * SPEED) / PERIOD_PX) % 1 + 1) % 1;
+      let v = ecgCycle(ph);
+      // 混入室颤
+      v = v * (1 - chaotic) + vfCycle(x, t, 1) * chaotic;
+      // 拉平（留一点极轻微的麦浪噪声让直线不死）
+      v *= (1 - flat);
+      const micro = Math.sin(x * 1.7 + t * 3) * 1.6;
+      const y = ECG_Y - v * 230 + micro;
+      if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.lineWidth = p.width;
+    ctx.strokeStyle = `rgba(54,240,200,${p.alpha})`;
+    ctx.stroke();
+  }
+
+  // 平直线两端的冷白高光
+  if (flat > 0.5) {
+    ctx.strokeStyle = `rgba(220,255,250,${(flat - 0.5) * 1.2})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, ECG_Y);
+    ctx.lineTo(W, ECG_Y);
+    ctx.stroke();
+  }
+
+  // 8.5s 闪白前最后一瞬：画面微微泛红（警报染色）
+  if (t >= 8.15 && t < 8.6) {
+    const pulse = 0.10 + 0.08 * Math.sin(t * 14);
+    ctx.fillStyle = `rgba(255,20,40,${pulse})`;
+    ctx.fillRect(0, 0, W, H);
+  }
+}
+
+// ---------- 镜头三：愛字 → 粒子 ----------
+let particles = null;
+
+function buildParticles() {
+  // 离屏画布把"愛"字栅格化，采样不透明像素作为粒子
+  const off = document.createElement("canvas");
+  off.width = W; off.height = H;
+  const o = off.getContext("2d");
+  o.font = "620px SimSun, serif";
+  o.textAlign = "center";
+  o.textBaseline = "alphabetic";
+  o.fillStyle = "#fff";
+  o.fillText("愛", W / 2, 720);
+
+  const data = o.getImageData(0, 0, W, H).data;
+  const rng = mulberry32(20260928);
+  const list = [];
+  const STEP = 7;
+  for (let y = 0; y < H; y += STEP) {
+    for (let x = 0; x < W; x += STEP) {
+      if (data[(y * W + x) * 4 + 3] > 120) {
+        list.push({
+          x0: x, y0: y,
+          // 略微向外的冲击初速度
+          vx: ((x - W / 2) / W) * 260 + (rng() - 0.5) * 90,
+          vy: -(60 + rng() * 160),
+          g: 980 + rng() * 420,
+          size: 2.5 + rng() * 3.5,
+          drift: (rng() - 0.5) * 60,
+          delay: rng() * 0.35,          // 错落碎裂
+          rot: rng() * Math.PI * 2,
+          spin: (rng() - 0.5) * 6,
+          shade: 180 + Math.floor(rng() * 60)
+        });
+      }
+    }
+  }
+  return list;
+}
+
+function drawParticles(t) {
+  const START = 12.6, DUR = 2.1;
+  const globalP = Math.min(1, Math.max(0, (t - START) / DUR));
+
+  for (const pt of particles) {
+    const pp = Math.min(1, Math.max(0, (globalP - pt.delay) / (1 - pt.delay)));
+    if (pp <= 0) continue;
+    const x = pt.x0 + pt.vx * pp + Math.sin(pt.rot + t * 2) * pt.drift * pp;
+    const y = pt.y0 + pt.vy * pp + 0.5 * pt.g * pp * pp;
+    // 个体先于全局熄灭
+    let alpha = 1 - pp * pp * 0.92;
+    alpha *= Math.min(1, Math.max(0, (14.95 - t) / 0.25));
+    if (alpha <= 0.01) continue;
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(pt.rot + pt.spin * pp);
+    ctx.fillStyle = `rgba(${pt.shade},0,18,${alpha})`;
+    const s = pt.size * (1 - pp * 0.35);
+    ctx.fillRect(-s / 2, -s / 2, s, s);
+    ctx.restore();
+  }
+}
+
+// ---------- 总绘制：时间 t 的纯函数 ----------
+function draw() {
+  const t = state.t;
+  ctx.clearRect(0, 0, W, H);
+  const frame = Math.round(t * 30);
+
+  if (t < 9.6) {
+    drawECG(Math.min(t, 8.6), frame);
+    drawGrain(frame);
+  } else if (t >= 12.6) {
+    // 碎裂瞬间黑色清场后画粒子
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, W, H);
+    if (!particles) particles = buildParticles();
+    drawParticles(t);
+  }
+  // 9.6 - 12.6：纯黑/纯 DOM 层（愛字），画布什么都不画
+}
+
+// ---------- GSAP 时间轴 ----------
+window.__timelines = window.__timelines || {};
+const tl = gsap.timeline({ paused: true });
+
+// ① 唯一的 canvas 驱动器：一条 15 秒 tween，seek 时 onUpdate 重绘
+const state = { t: 0 };
+tl.to(state, { t: 15, duration: 15, ease: "none", onUpdate: draw }, 0);
+
+// ② 心跳子轴：lub-dub（强拍+弱拍），非暂停、循环到死亡
+const hb = gsap.timeline({ repeat: 9 });
+hb.to("#heart", { scale: 1.22, duration: 0.09, ease: "power2.out" })
+  .to("#heart", { scale: 1.0,  duration: 0.12, ease: "power2.inOut" })
+  .to("#heart", { scale: 1.10, duration: 0.07, ease: "power2.out" })
+  .to("#heart", { scale: 1.0,  duration: BEAT - 0.28 });
+tl.add(hb, 0);
+
+// ③ 8.15s 心率 72 → 0
+tl.to("#hr-72", { opacity: 0, duration: 0.1 }, 8.15)
+  .to("#hr-0",  { opacity: 1, duration: 0.1 }, 8.15);
+
+// ④ FLATLINE 警报闪烁
+tl.fromTo("#warn", { opacity: 0.15 },
+  { opacity: 1, duration: 0.18, ease: "none", yoyo: true, repeat: 5 }, 8.2);
+
+// ⑤ 闪白：极速到全白，再缓落
+tl.to("#flash", { opacity: 1, duration: 0.05, ease: "none" }, 8.5)
+  .to("#flash", { opacity: 0, duration: 0.55, ease: "power2.out" }, 8.55);
+
+// ⑥ 愛字登场（10.2s 起）
+tl.fromTo("#ai-char",
+  { opacity: 0, scale: 1.12 },
+  { opacity: 1, scale: 1, duration: 0.9, ease: "power3.out" }, 10.2);
+
+// ⑦ 11.4s 起愛字微抖 + 裂纹描边
+tl.to("#ai-char", {
+  keyframes: [
+    { x: -5, duration: 0.06 }, { x: 5, duration: 0.06 },
+    { x: -3, duration: 0.06 }, { x: 3, duration: 0.06 }, { x: 0, duration: 0.06 }
+  ],
+  repeat: 2
+}, 11.4);
+
+tl.to("#cracks", { opacity: 1, duration: 0.05 }, 11.4)
+  .to(".crack", { strokeDashoffset: 0, duration: 0.9, ease: "power3.in", stagger: 0.12 }, 11.45)
+  // 12.55s 冲击前的一帧红屏预兆
+  .to("#ai-char", { color: "#ff0022", duration: 0.08 }, 12.5);
+
+window.__timelines["narrative-demo"] = tl;
+draw(); // 初始帧
+</script>
+</body>
+</html>

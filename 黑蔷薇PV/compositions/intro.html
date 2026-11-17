@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Intro — 黒薔薇の祈り 0:00-0:38</title>
+<script src="assets/vendor/gsap.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000; overflow: hidden; }
+  .clip { position: absolute; }
+
+  /* 宋体兜底 + 游明朝（与字幕轨同一字体声明，local 链即可通过契约） */
+  @font-face { font-family: 'SimSun'; src: local('SimSun'), local('宋体'); }
+  @font-face { font-family: 'PV-Mincho'; src: local('Yu Mincho'), local('游明朝'),
+               local('SimSun'), local('宋体'); }
+
+  #root {
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    background: #020003;
+  }
+
+  /* 雨、雾、闪电天光、余烬、震屏都画在画布上 */
+  #stage {
+    width: 1920px;
+    height: 1080px;
+    left: 0;
+    top: 0;
+  }
+
+  /* ===== 世界容器：教堂外景 / 黑蔷薇 / 棺椁同处一个雨夜空间，
+     镜头的近景→拉开→急推与震屏统一施加于此 ===== */
+  #world {
+    inset: 0;
+    transform-origin: 50% 60%;
+    will-change: transform;
+  }
+
+  /* 教堂夜景剪影：尖塔/山墙/玫瑰窗/尖拱窗，平时融入黑夜，只被闪电照亮 */
+  #church {
+    inset: 0;
+  }
+
+  /* 黑蔷薇花苞：SVG 自身即定时元素（避免嵌套告警） */
+  #rose {
+    width: 620px;
+    height: 1000px;
+    left: 650px;
+    top: 50px;
+    overflow: visible;
+    transform-origin: 50% 45%;
+  }
+  .rose-line {
+    fill: #0d0205;
+    stroke: #2a0610;
+    stroke-width: 3.2;
+    stroke-linejoin: round;
+  }
+  .rose-stroke {
+    fill: none;
+    stroke: #3a0812;
+    stroke-width: 2.6;
+    stroke-linecap: round;
+  }
+  .stem {
+    fill: none;
+    stroke: #1c050a;
+    stroke-width: 8;
+    stroke-linecap: round;
+  }
+  .thorn { fill: #1c050a; }
+  .leaf {
+    fill: #120308;
+    stroke: #2a0610;
+    stroke-width: 2.5;
+  }
+
+  /* 供在画外底部的棺：C 幕镜头拉开时才进入画面 */
+  #coffin {
+    width: 800px;
+    height: 320px;
+    left: 560px;
+    top: 648px;
+    opacity: 0;
+    overflow: visible;
+  }
+
+  /* B 幕雷闪中若隐若现的少女背影：立于右侧殿/尖拱窗前，
+     平日融进黑夜，只被闪电照成逆光剪影（冷青 rim 来自左前方玫瑰窗）。
+     世界盒 337×508（girl-back 比 .664），近景 camS1.18 下脚底贴湿地面 */
+  #girl-storm {
+    width: 337px;
+    height: 508px;
+    left: 1248px;
+    top: 494px;
+    opacity: 0;
+    will-change: opacity, transform;
+  }
+  #girl-storm img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: contain;
+  }
+  #girl-storm .gsil { filter: brightness(.10) saturate(.3) contrast(1.4); }
+  #girl-storm .grim { mix-blend-mode: screen; }
+
+  /* 全屏闪光层（冷白频闪 / 红色冲击 / 结尾白闪） */
+  #flash-layer {
+    inset: 0;
+    background: #fff;
+    opacity: 0;
+  }
+
+  /* 开场黑场 + 结尾切出（opacity 由 draw 每帧接管，0 为防御初值） */
+  #fade-black {
+    inset: 0;
+    background: #000;
+    opacity: 0;
+  }
+
+  /* ===== 曲名标题：红雾段中部的仪式铭文 ===== */
+  /* 柔暗背板：压掉穿过标题区的花茎，如夜色中的铭文碑面 */
+  #title-back {
+    left: 430px;
+    top: 606px;
+    width: 1060px;
+    height: 250px;
+    opacity: 0;
+    background: radial-gradient(ellipse 50% 60% at 50% 50%,
+                rgba(10,3,6,.72) 0%, rgba(8,2,5,.42) 55%, rgba(0,0,0,0) 100%);
+  }
+  #title-card {
+    width: 100%;
+    top: 628px;
+    text-align: center;
+    opacity: 0;
+    will-change: opacity, transform;
+  }
+  /* 装饰线组：两条暗血金细线向两侧展开，中央菱形收束 */
+  .deco {
+    position: relative;
+    width: 640px;
+    height: 14px;
+    margin: 0 auto 14px;
+  }
+  .deco .ln {
+    position: absolute;
+    top: 6px;
+    right: 354px;
+    height: 1px;
+    width: 286px;
+    background: linear-gradient(90deg, rgba(196,150,120,0), rgba(214,178,140,.85));
+    transform: scaleX(0);
+    transform-origin: right center;
+  }
+  .deco .ln.r {
+    right: auto;
+    left: 354px;
+    background: linear-gradient(90deg, rgba(214,178,140,.85), rgba(196,150,120,0));
+    transform-origin: left center;
+  }
+  .deco .diamond {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 9px;
+    height: 9px;
+    margin: -4.5px 0 0 -4.5px;
+    background: rgba(232,198,156,.95);
+    box-shadow: 0 0 10px rgba(226,180,120,.8);
+    transform: rotate(45deg) scale(0);
+  }
+  /* 外圈细菱：父级已转 45°，方块边框在屏上即菱形，随父级一起缩放 */
+  .deco .diamond::after {
+    content: "";
+    position: absolute;
+    inset: -8px;
+    border: 1px solid rgba(226,192,150,.55);
+  }
+  #title-card .jp {
+    font-family: "PV-Mincho", "SimSun", serif;
+    font-size: 84px;
+    letter-spacing: 34px;
+    text-indent: 34px;
+    line-height: 1.1;
+    background: linear-gradient(180deg,
+                #f3e2e6 0%, #d8b3bd 52%, #9c6673 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 0 14px rgba(190,52,64,.5));
+  }
+  #title-card .sub {
+    margin-top: 12px;
+    font-family: "Times New Roman", serif;
+    font-size: 21px;
+    letter-spacing: 13px;
+    text-indent: 13px;
+    color: rgba(222,196,172,.62);
+  }
+</style>
+</head>
+<body>
+  <div id="root"
+       data-composition-id="intro"
+       data-width="1920"
+       data-height="1080">
+
+    <canvas id="stage" class="clip" width="1920" height="1080"
+            data-start="0" data-duration="38" data-track-index="0"></canvas>
+
+    <!-- 统一镜头空间：教堂夜景 + 黑蔷薇 + 棺椁 -->
+    <div id="world" class="clip"
+         data-start="0" data-duration="38" data-track-index="1">
+
+      <!-- 雨夜教堂外景（纯 SVG 剪影，只在闪电中显形） -->
+      <svg id="church" class="clip" viewBox="0 0 1920 1080"
+           preserveAspectRatio="xMidYMax meet"
+           data-start="0" data-duration="38" data-track-index="1">
+        <!-- 湿地面：闪电时承接冷反光 -->
+        <rect class="masonry" x="-40" y="1002" width="2000" height="118"/>
+
+        <!-- 左右尖塔 -->
+        <polygon class="masonry" points="176,1002 262,1002 262,308 176,308"/>
+        <polygon class="masonry" points="166,312 219,196 272,312"/>
+        <polygon class="masonry" points="1658,1002 1744,1002 1744,308 1658,308"/>
+        <polygon class="masonry" points="1648,312 1701,196 1754,312"/>
+
+        <!-- 侧殿低屋顶 -->
+        <polygon class="masonry" points="300,1002 560,1002 560,648 420,706 300,760"/>
+        <polygon class="masonry" points="1360,1002 1620,1002 1620,760 1500,706 1360,648"/>
+
+        <!-- 中殿大山墙立面 -->
+        <polygon class="masonry" points="560,1002 560,452 960,252 1360,452 1360,1002"/>
+
+        <!-- 玫瑰窗（圆窗，闪电时透冷光） -->
+        <circle class="window" cx="960" cy="430" r="64"/>
+        <circle class="window-bar" cx="960" cy="430" r="64"/>
+        <path class="window-bar" d="M896 430 H1024 M960 366 V494
+              M915 385 L1005 475 M1005 385 L915 475" stroke-width="3"/>
+
+        <!-- 三扇尖拱窗（柳叶窗） -->
+        <path class="window" d="M665 952 L665 628
+              Q665 572 720 572 Q775 572 775 628 L775 952 Z"/>
+        <path class="window" d="M905 952 L905 588
+              Q905 532 960 532 Q1015 532 1015 588 L1015 952 Z"/>
+        <path class="window" d="M1145 952 L1145 628
+              Q1145 572 1200 572 Q1255 572 1255 628 L1255 952 Z"/>
+
+        <!-- 窗格石棂（闪电时勾出结构） -->
+        <path class="window-bar" d="M720 586 V952 M678 760 H762 M672 860 H768"
+              stroke-width="4" fill="none"/>
+        <path class="window-bar" d="M960 546 V952 M918 730 H1002 M912 830 H1008"
+              stroke-width="4" fill="none"/>
+        <path class="window-bar" d="M1200 586 V952 M1158 760 H1242 M1152 860 H1248"
+              stroke-width="4" fill="none"/>
+
+        <!-- 立面石缝横纹 -->
+        <path class="masonry-line" d="M600 520 H1320 M600 1002 H1320"
+              stroke-width="3" fill="none" opacity="0.8"/>
+      </svg>
+
+      <!-- 黑蔷薇（带刺的茎 + 花萼 + 紧裹的花苞） -->
+      <svg id="rose" class="clip" viewBox="0 0 200 420"
+           data-start="0" data-duration="38" data-track-index="2"
+           data-layout-allow-overflow>
+        <defs>
+          <!-- 花苞内部透出的红光：A幕心跳 / C幕持续灼烧 -->
+          <radialGradient id="innerGlow" cx="50%" cy="40%" r="58%">
+            <stop offset="0%"  stop-color="#ff2a44" stop-opacity="0.9"/>
+            <stop offset="55%" stop-color="#8a0a20" stop-opacity="0.35"/>
+            <stop offset="100%" stop-color="#000" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+
+        <!-- 茎 -->
+        <path class="stem" d="M100 420 C98 360 103 300 100 252"/>
+        <!-- 刺 -->
+        <path class="thorn" d="M100 350 l-17 -8 l16 -1 z"/>
+        <path class="thorn" d="M100 305 l16 -9 l-15 -2 z"/>
+        <!-- 小叶 -->
+        <path class="leaf" d="M100 382 C77 378 60 362 56 343 C80 348 96 363 100 382 Z"/>
+
+        <!-- 花萼：四片尖锐萼片从花苞底部向外刺出 -->
+        <polygon class="leaf" points="94,208 30,192 88,218"/>
+        <polygon class="leaf" points="106,208 170,192 112,218"/>
+        <polygon class="leaf" points="96,216 62,256 100,222"/>
+        <polygon class="leaf" points="104,216 138,256 100,222"/>
+
+        <!-- 花苞主体：火焰杯形，中上部最宽、花瓣叠压出收腰 -->
+        <path class="rose-line"
+              d="M100 12
+                 C82 12 67 26 61 46
+                 C57 58 60 68 55 77
+                 C47 97 54 135 71 172
+                 C82 196 91 213 100 224
+                 C109 213 118 196 129 172
+                 C146 135 153 97 145 77
+                 C140 68 143 58 139 46
+                 C133 26 118 12 100 12 Z"/>
+        <!-- 内部红光 -->
+        <ellipse id="glow" cx="100" cy="118" rx="46" ry="74"
+                 fill="url(#innerGlow)" opacity="0"/>
+
+        <!-- 顶部螺旋核心瓣：玫瑰蕾的旋涡中心 -->
+        <path class="rose-line" style="stroke-width:2.6"
+              d="M100 14
+                 C91 29 87 44 91 59
+                 C94 70 106 70 109 59
+                 C113 44 109 29 100 14 Z"/>
+        <!-- 两侧内瓣：从顶端斜向旋下（无横线，避免脸谱感） -->
+        <path class="rose-stroke" style="stroke-width:2.8"
+              d="M85 27 C73 50 69 80 74 108"/>
+        <path class="rose-stroke" style="stroke-width:2.8"
+              d="M115 27 C127 50 131 80 126 108"/>
+        <path class="rose-stroke" style="stroke-width:2.2"
+              d="M72 92 C66 120 70 148 82 172"/>
+        <path class="rose-stroke" style="stroke-width:2.2"
+              d="M128 92 C134 120 130 148 118 172"/>
+      </svg>
+
+      <!-- 雷闪中的少女背影（B 幕 9-20s）：逆光剪影，随闪电若隐若现 -->
+      <div id="girl-storm" class="clip"
+           data-start="0" data-duration="38" data-track-index="2"
+           data-layout-allow-overflow>
+        <img class="gsil" src="assets/images/girl-back.png" alt="">
+        <img class="grim" id="storm-rimL" src="assets/rim/girl-back-rimL.png" alt="">
+        <img class="grim" id="storm-rimR" src="assets/rim/girl-back-rimR.png" alt="">
+      </div>
+
+      <!-- 棺椁：黑蔷薇供于棺前（C 幕拉开显形），系带十字与 Verse 镜4 呼应 -->
+      <svg id="coffin" class="clip" viewBox="0 0 800 320"
+           data-start="0" data-duration="38" data-track-index="3"
+           data-layout-allow-overflow>
+        <defs>
+          <!-- 棺盖弧面受光：顶盖沿暗红微光沉向底部近黑 -->
+          <linearGradient id="coffinShade" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"  stop-color="rgba(96,18,24,.62)"/>
+            <stop offset="45%" stop-color="rgba(40,8,12,.78)"/>
+            <stop offset="100%" stop-color="rgba(10,3,7,.92)"/>
+          </linearGradient>
+        </defs>
+        <path id="coffin-body" fill="url(#coffinShade)"
+              d="M70 286 L132 96 Q158 52 400 52 Q642 52 668 96 L730 286 Z"/>
+        <path id="coffin-edge" fill="none" stroke-width="5"
+              d="M70 286 L132 96 Q158 52 400 52 Q642 52 668 96 L730 286"/>
+        <!-- 棺盖中线与十字系带 -->
+        <path id="coffin-line" fill="none" stroke-width="3"
+              d="M400 56 V286 M150 196 H650"/>
+      </svg>
+    </div>
+
+    <!-- 曲名铭文（背板与卡片分开控制淡入） -->
+    <div id="title-back" class="clip"
+         data-start="0" data-duration="38" data-track-index="4"
+         data-layout-allow-occlusion></div>
+    <div id="title-card" class="clip"
+         data-start="0" data-duration="38" data-track-index="4"
+         data-layout-allow-occlusion>
+      <div class="deco">
+        <span class="ln l"></span>
+        <span class="diamond"></span>
+        <span class="ln r"></span>
+      </div>
+      <h1 class="jp">黒薔薇の祈り</h1>
+      <div class="sub">LA PRI&Egrave;RE DE LA ROSE NOIRE</div>
+    </div>
+
+    <div id="flash-layer" class="clip"
+         data-start="0" data-duration="38" data-track-index="8"></div>
+
+    <div id="fade-black" class="clip"
+         data-start="0" data-duration="38" data-track-index="9"></div>
+  </div>
+
+<script>
+/* ============================================================
+ * Intro 三幕（叙事化返工版）：
+ *  A 0-9s    黑而不空：开场 1s 褪黑 → 雨幕 + 花苞心跳红光，
+ *            3.5s/6.5s 两次远雷，天际线呼吸
+ *  B 9-20s   闪电揭示：9.5s 主闪电照亮雨夜教堂（尖拱/玫瑰窗/尖塔），
+ *            13/16.3/19s 三次递进闪电，余晖中空间不完全归零
+ *  C 20-38s  红集结：镜头缓拉下移，棺椁从底部显形——黑蔷薇供于棺前；
+ *            红雾/余烬上浮/红闪/震屏；24-33s 曲名铭文；
+ *            37.8s 全白 → 匹配剪辑进入 Verse 的教堂内景
+ * 所有画面为 t 的纯函数；拍点事件内联自 beats/*.json
+ * ============================================================ */
+
+// [时间秒, 强度0-1]，仅 Intro 段（来源：hyperframes beats）
+const BEATS = [
+  [0.715,.61],[0.875,.62],[1.248,.38],[1.515,.31],[1.803,.30],[2.069,.38],
+  [2.347,.31],[2.624,.32],[2.891,.47],[3.157,.41],[3.456,.43],[3.723,.38],
+  [3.840,.34],[3.989,.39],[4.128,.39],[4.267,.35],[4.416,.36],[4.821,.51],
+  [5.099,.59],[5.323,.59],[5.632,.36],[5.920,.31],[6.197,.30],[6.464,.30],
+  [6.752,.33],[6.997,.49],[7.264,.57],[7.552,.51],[7.829,.47],[8.128,.43],
+  [8.405,.44],[8.672,.34],[8.960,.37],[9.483,.57],[9.920,.43],[10.080,.46],
+  [10.336,.33],[10.613,.32],[10.869,.42],[11.136,.37],[11.413,.52],[11.520,.52],
+  [11.701,.57],[12.224,.57],[12.789,.51],[13.067,.50],[13.749,.50],[14.315,.50],
+  [14.709,.42],[14.987,.59],[15.275,.50],[15.413,.58],[15.520,.61],[16.107,.61],
+  [16.224,.57],[16.875,.52],[17.045,.55],[17.717,.61],[18.144,.60],[18.560,.35],
+  [18.816,.26],[19.093,.36],[19.243,.29],[19.381,.36],[19.936,.52],[20.043,.47],
+  [20.160,.51],[20.437,.55],[20.832,.54],[21.227,.52],[21.867,.54],[22.368,.57],
+  [23.051,.58],[23.435,.53],[23.595,.53],[24.000,.57],[24.512,.61],[25.227,.49],
+  [25.643,.52],[25.984,.54],[26.219,.54],[26.976,.56],[27.285,.54],[27.808,.52],
+  [28.064,.61],[28.352,.52],[28.480,.51],[28.885,.60],[30.411,.49],[30.539,.55],
+  [31.349,.54],[32.725,.63],[34.059,.54],[35.445,.59],[36.139,.59],[36.256,.56],
+  [37.077,.56],[37.749,.65],[37.909,.56]
+];
+
+// 拍点冲击包络：t 时刻所有拍点衰减核之和
+function punchEnv(t, t0, t1, decay, thresh) {
+  let e = 0;
+  for (const [bt, s] of BEATS) {
+    if (bt < t0 - 0.5 || bt > t1 + 0.5 || s < thresh) continue;
+    const dt = Math.abs(t - bt);
+    if (dt < decay * 4) e += s * Math.exp(-dt / decay);
+  }
+  return Math.min(1.4, e);
+}
+
+/* ===== 闪电事件表（手工编排，承担叙事揭示，不靠随机拍点）=====
+ * 远雷只亮天际；主闪电照亮整座教堂；主闪后 0.12s 带一次真实的二次回闪 */
+const STRIKES = [
+  [ 3.50, .10, .60],   // 远雷 1：仅天际呼吸
+  [ 6.50, .17, .55],   // 远雷 2：建筑轮廓一闪即逝（预告）
+  [ 9.50, .92, .26],   // 主闪电：空间揭示
+  [ 9.63, .42, .22],   // └回闪
+  [13.00, .56, .26],
+  [16.30, .74, .28],
+  [19.00, .62, .24]
+];
+
+// 返回 { core: 锐利闪峰, glow: 余晖 } 均 0-1
+function strikeEnv(t) {
+  let core = 0, glow = 0;
+  for (const [bt, s, decay] of STRIKES) {
+    const dt = t - bt;
+    if (dt < -0.05 || dt > 1.6) continue;
+    if (dt >= 0 && dt < 0.075) core = Math.max(core, s * (1 - dt / 0.075 * 0.25));
+    if (dt >= 0) glow = Math.max(glow, s * Math.exp(-dt / decay));
+  }
+  return { core, glow: Math.min(1, glow) };
+}
+
+const clamp01 = v => Math.min(1, Math.max(0, v));
+const smooth = (a, b, x) => { x = clamp01((x - a) / (b - a)); return x * x * (3 - 2 * x); };
+
+// 确定性伪随机
+function rng(seed) {
+  return function () {
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const canvas = document.getElementById("stage");
+const ctx = canvas.getContext("2d");
+const flashLayer = document.getElementById("flash-layer");
+const fadeBlack = document.getElementById("fade-black");
+const world = document.getElementById("world");
+const rose = document.getElementById("rose");
+const glow = document.getElementById("glow");
+const coffin = document.getElementById("coffin");
+const stormGirl = document.getElementById("girl-storm");
+const stormRimL = document.getElementById("storm-rimL");
+const stormRimR = document.getElementById("storm-rimR");
+const coffinBody = document.getElementById("coffin-body");
+const coffinEdge = document.getElementById("coffin-edge");
+const coffinLine = document.getElementById("coffin-line");
+const titleCard = document.getElementById("title-card");
+const titleBack = document.getElementById("title-back");
+const decoL = document.querySelector(".deco .ln:not(.r)");
+const decoR = document.querySelector(".deco .ln.r");
+const diamond = document.querySelector(".deco .diamond");
+const W = 1920, H = 1080;
+
+// 教堂结构节点缓存（每帧只改 fill/stroke，不触发布局）
+const masonry = document.querySelectorAll(".masonry");
+const windows = document.querySelectorAll(".window");
+const masonryLines = document.querySelectorAll(".masonry-line");
+const windowBars = document.querySelectorAll(".window-bar");
+
+// 雨滴池：位置由种子决定，运动是 t 的线性函数（seek 安全）
+const drops = [];
+{
+  const r = rng(4242);
+  for (let i = 0; i < 260; i++) {
+    drops.push({
+      x: r() * (W + 400) - 200,
+      y0: r() * (H + 600) - 300,
+      len: 18 + r() * 46,
+      spd: 900 + r() * 700,
+      layer: r()           // 层级：速度/透明度差
+    });
+  }
+}
+
+function drawRain(t, density, wind, alpha, bolt) {
+  ctx.lineCap = "round";
+  const n = Math.floor(drops.length * density);
+  // 闪电瞬间雨丝被照成冷银色
+  const lit = clamp01(bolt * 1.1);
+  for (let i = 0; i < n; i++) {
+    const d = drops[i];
+    const y = ((d.y0 + d.spd * t) % (H + 600)) - 300;
+    const x = d.x + wind * (y - d.y0) * 0.35;
+    const a = alpha * (0.3 + d.layer * 0.7) * (1 + lit * 1.6);
+    const cr = Math.round(150 + lit * 60);
+    const cg = Math.round(180 + lit * 55);
+    const cb = Math.round(210 + lit * 45);
+    ctx.strokeStyle = `rgba(${cr},${cg},${cb},${clamp01(a).toFixed(3)})`;
+    ctx.lineWidth = 0.8 + d.layer * 1.4;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x - wind * d.len * 0.5, y + d.len);
+    ctx.stroke();
+  }
+}
+
+// 红雾：若干低频漂移的径向光斑
+const fogBlobs = [];
+{
+  const r = rng(777);
+  for (let i = 0; i < 9; i++) {
+    fogBlobs.push({
+      x: r() * W, y: H * (0.55 + r() * 0.5),
+      rad: 380 + r() * 520,
+      ph: r() * Math.PI * 2,
+      spd: 0.05 + r() * 0.09,
+      a: 0.5 + r() * 0.5
+    });
+  }
+}
+
+function drawFog(t, amount) {
+  if (amount <= 0.001) return;
+  for (const b of fogBlobs) {
+    const x = b.x + Math.sin(t * b.spd + b.ph) * 140;
+    const y = b.y + Math.cos(t * b.spd * 0.7 + b.ph) * 60;
+    const pulse = 0.75 + 0.25 * Math.sin(t * 0.8 + b.ph);
+    const g = ctx.createRadialGradient(x, y, 0, x, y, b.rad);
+    g.addColorStop(0, `rgba(120,8,24,${0.16 * amount * b.a * pulse})`);
+    g.addColorStop(1, "rgba(120,8,24,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(x - b.rad, y - b.rad, b.rad * 2, b.rad * 2);
+  }
+  // 底部弥漫的暗红雾幕
+  const g2 = ctx.createLinearGradient(0, H * 0.45, 0, H);
+  g2.addColorStop(0, "rgba(60,0,10,0)");
+  g2.addColorStop(1, `rgba(90,4,16,${0.5 * amount})`);
+  ctx.fillStyle = g2;
+  ctx.fillRect(0, H * 0.45, W, H * 0.55);
+}
+
+/* ===== 余烬：C 幕从棺后升起的暗红火星（灵魂意象的伏笔）===== */
+const embers = [];
+{
+  const r = rng(5151);
+  for (let i = 0; i < 34; i++) {
+    embers.push({
+      x: 420 + r() * 1080,
+      y0: 880 + r() * 220,
+      spd: 14 + r() * 34,
+      drift: 18 + r() * 46,
+      ph: r() * Math.PI * 2,
+      size: 1.4 + r() * 2.2,
+      tw: 1.4 + r() * 2.6
+    });
+  }
+}
+
+function drawEmbers(t, amount) {
+  if (amount <= 0.001) return;
+  for (const e of embers) {
+    const span = 1100;
+    let y = e.y0 - e.spd * (t - 20);
+    if (y < -20) y += ((e.y0 + 20) + span);   // 循环回收
+    if (y > H + 20) continue;
+    const x = e.x + Math.sin(t * 0.5 + e.ph) * e.drift
+              + (t - 20) * 3.2;               // 整体随风微偏
+    if (x < -20 || x > W + 20) continue;
+    const tw = 0.55 + 0.45 * Math.sin(t * e.tw + e.ph);
+    const a = amount * tw * clamp01((y - 60) / 120) * 0.9;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, e.size * 4);
+    g.addColorStop(0, `rgba(255,118,70,${(a).toFixed(3)})`);
+    g.addColorStop(0.4, `rgba(200,48,36,${(a * .6).toFixed(3)})`);
+    g.addColorStop(1, "rgba(120,10,12,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(x - e.size * 4, y - e.size * 4, e.size * 8, e.size * 8);
+  }
+}
+
+function drawGrain(frame) {
+  const r = rng(31337 + frame);
+  ctx.fillStyle = "rgba(200,210,230,0.045)";
+  for (let i = 0; i < 160; i++) {
+    ctx.fillRect(r() * W, r() * H, 1 + r() * 2, 1 + r() * 2);
+  }
+}
+
+const state = { t: 0 };
+
+function draw() {
+  const t = state.t;
+  const frame = Math.round(t * 30);
+  ctx.clearRect(0, 0, W, H);
+
+  // ---- 三幕包络 ----
+  const actB = smooth(8.4, 9.6, t) * (1 - smooth(19.5, 21.0, t)); // 冷闪窗口
+  const actC = smooth(19.5, 23.0, t);                            // 红雾段
+  const rainDensity = 0.34 + 0.42 * smooth(1.2, 14, t) + 0.24 * actC;
+  const wind = 6 + 22 * smooth(14, 26, t);
+
+  // 闪电：远雷 + 主闪 + 回闪
+  const strike = strikeEnv(t);
+  const bolt = clamp01(strike.core * 0.9 + strike.glow);
+
+  // ---- 震屏（C 幕，拍点冲击驱动） ----
+  const punch = punchEnv(t, 20, 37.7, 0.13, 0.45) * actC;
+  const jx = Math.sin(t * 93.0) * punch * 10 + Math.sin(t * 47.3) * punch * 5;
+  const jy = Math.cos(t * 71.0) * punch * 8;
+
+  ctx.save();
+  ctx.translate(jx, jy);
+
+  // ---- 闪电天光：锐利峰 + 余晖分开，压顶冷光 + 湿地面冷反光 ----
+  const skyA = strike.core * .20 + strike.glow * .07;
+  const groundA = strike.core * .12 + strike.glow * .03;
+  if (skyA > 0.003) {
+    const sg = ctx.createLinearGradient(0, -40, 0, 520);
+    sg.addColorStop(0, `rgba(150,178,226,${skyA.toFixed(3)})`);
+    sg.addColorStop(1, "rgba(120,150,200,0)");
+    ctx.fillStyle = sg;
+    ctx.fillRect(-60, -60, W + 120, 600);
+
+    const gg = ctx.createLinearGradient(0, 980, 0, 1080);
+    gg.addColorStop(0, "rgba(150,180,226,0)");
+    gg.addColorStop(1, `rgba(150,180,226,${groundA.toFixed(3)})`);
+    ctx.fillStyle = gg;
+    ctx.fillRect(-60, 980, W + 120, 160);
+  }
+
+  // 雨（冷蓝灰底，闪电瞬间转冷银）
+  drawRain(t, rainDensity, wind * 0.16, 0.20 + 0.10 * actB + 0.08 * actC, bolt);
+  drawFog(t, actC * (0.7 + 0.3 * punchEnv(t, 20, 38, 0.2, 0.3)));
+  drawEmbers(t, actC);
+  drawGrain(frame);
+  ctx.restore();
+
+  // ---- 教堂：逆光剪影光学。闪电峰时天空亮，石墙只提一档仍近黑，
+  //      真正亮的是窗洞；窗棂是亮窗上的深色石条 ----
+  const lit = bolt;
+  const wallA = (0.28 + lit * 0.26).toFixed(3);
+  const wallR = Math.round(9 + lit * 43);
+  const wallG = Math.round(13 + lit * 49);
+  const wallB = Math.round(23 + lit * 67);
+  masonry.forEach(el => {
+    el.style.fill = `rgba(${wallR},${wallG},${wallB},${wallA})`;
+  });
+  windows.forEach(el => {
+    el.style.fill = `rgba(196,214,255,${(lit * 0.72).toFixed(3)})`;
+  });
+  masonryLines.forEach(el => {
+    el.style.stroke = `rgba(168,188,232,${(lit * 0.28).toFixed(3)})`;
+  });
+  // 棂条只在窗洞透光时出现（亮窗上的深色石条），窗灭则一起隐没
+  windowBars.forEach(el => {
+    el.style.stroke = `rgba(6,9,16,${(lit * 0.85).toFixed(3)})`;
+  });
+
+  // ---- 镜头：0-20s 花苞近景 → 20-36s 缓拉下移露出棺 → 37.45s 急推迎白闪 ----
+  const pull = smooth(20, 36, t);
+  let camS = 1.18 - 0.18 * pull;
+  let camY = -50 + 140 * pull;   // 近景微露山墙；拉开终态完整露出棺椁
+  const rush = smooth(37.45, 37.82, t);
+  camS += 0.10 * rush;
+  camY += -50 * rush;
+  world.style.transform =
+    `translate(${jx.toFixed(2)}px,${jy.toFixed(2)}px) ` +
+    `translateY(${camY.toFixed(2)}px) scale(${camS.toFixed(4)})`;
+
+  // 花苞自身的轻微呼吸
+  const breathe = 1.0 + 0.012 * Math.sin(t * 1.1);
+  rose.style.transform = `scale(${breathe.toFixed(4)})`;
+
+  // ---- 花苞红光：A幕 lub-dub 双搏心跳；B幕压低；C幕持续灼烧 ----
+  let heart = 0;
+  if (t > 1.2 && t < 20) {
+    const ph = (t - 1.2) % 2.15;
+    heart = Math.exp(-Math.pow(ph - 0.10, 2) / 0.045) * 0.75
+          + Math.exp(-Math.pow(ph - 0.42, 2) / 0.030) * 0.48;
+    heart *= 1 - smooth(8.6, 9.4, t) * 0.55;   // 主闪来临前沉到最低点
+    heart *= (1 - actC);
+  }
+  const red  = actC * (0.35 + 0.65 * punchEnv(t, 20, 37.7, 0.12, 0.4));
+  glow.style.opacity = clamp01(0.04 + heart * 0.5 + red * 0.95).toFixed(3);
+
+  // 冷闪时花苞压成窗前黑影（只走暗冷青线）；C 幕才允许亮红描边
+  const cold = strike.glow * (0.5 + strike.core);
+  const edgeLit = clamp01(cold * 0.9 + red);
+  const edgeR = Math.round(58 + cold * 50 + red * 197);
+  const edgeG = Math.round(16 + cold * 76);
+  const edgeB = Math.round(26 + cold * 100);
+  document.querySelectorAll(".rose-line,.rose-stroke,.stem,.leaf,.thorn")
+    .forEach((el, i) => {
+      const k = 0.55 + (i % 4) * 0.15;
+      // A幕基线 .42 暗紫红：黑场后花形始终可辨；闪电时增量收窄防过曝
+      const base = t < 9.5 ? 0.42 : 0.20;
+      el.style.stroke =
+        `rgba(${edgeR},${edgeG},${edgeB},${(base + edgeLit * k * 0.32).toFixed(3)})`;
+    });
+
+  // ---- 棺椁：拉开中淡入（20-24s），C 幕暗红描边，拍点脉冲 ----
+  const coffinA = smooth(19.8, 24.2, t);
+  coffin.style.opacity = coffinA.toFixed(3);
+  const coffinPulse = punchEnv(t, 20, 37.7, 0.15, 0.4) * actC;
+  // 棺体使用 SVG 内 coffinShade 渐变填充（弧面受光），此处只控淡入
+  coffinBody.style.opacity = coffinA.toFixed(3);
+  coffinEdge.style.stroke =
+    `rgba(${130 + red * 90},${26 + coffinPulse * 60},${34 + red * 30},${(coffinA * (0.5 + red * 0.4)).toFixed(3)})`;
+  coffinLine.style.stroke =
+    `rgba(120,24,32,${(coffinA * (0.4 + coffinPulse * 0.3)).toFixed(3)})`;
+
+  // ---- 雷闪中的少女背影：存在窗 9.6-19.4s（20.1 前必须清零，让棺椁接管）----
+  // 峰闪整道黑影+冷青 rim 完整"现"形（2-3 帧）；指数余晖里 .3-.45 半透"若隐"
+  // 约 0.6s 后沉入黑夜；无闪间隔不可见
+  const stormWin = smooth(8.8, 9.6, t) * (1 - smooth(19.4, 20.1, t));
+  const reveal = clamp01(strike.core * 1.0 + strike.glow * 0.85);
+  stormGirl.style.opacity = (stormWin * reveal).toFixed(3);
+  // 主光来自左前方教堂玫瑰窗/尖拱窗 → rimL 强、rimR 只留一线
+  stormRimL.style.opacity =
+    (stormWin * clamp01(strike.core * 0.95 + strike.glow * 0.8)).toFixed(3);
+  stormRimR.style.opacity =
+    (stormWin * clamp01(strike.core * 0.25 + strike.glow * 0.22)).toFixed(3);
+  // 雨中极轻微的伫立晃动（纯函数）
+  stormGirl.style.transform =
+    `translateX(${(Math.sin(t * 0.9) * 1.2).toFixed(2)}px)`;
+
+  // ---- 闪光层：冷闪峰压到 .30——只刺眼，不把黑夜照成白天 ----
+  const flashCold = Math.min(0.30, strike.core * 0.34 + strike.glow * 0.05);
+  const flashRed  = Math.min(0.4, red * punch * 0.35);
+  // 37.75s 终极白闪：0.12s 拉满
+  const finalFlash = smooth(37.72, 37.82, t);
+  flashLayer.style.opacity = Math.max(flashCold, flashRed, finalFlash).toFixed(3);
+  flashLayer.style.background =
+    finalFlash > flashCold && finalFlash > flashRed ? "#fff"
+    : flashRed > flashCold ? "#c20018" : "#dce8ff";
+
+  // ---- 曲名铭文：24s 背板先入，装饰线展开，主标题上浮，33s 前退场 ----
+  const titleIn  = smooth(24.2, 25.6, t);
+  const titleOut = smooth(31.4, 33.0, t);
+  const titleVis = titleIn * (1 - titleOut);
+  titleBack.style.opacity = (smooth(24.0, 25.2, t) * (1 - titleOut) * 0.95).toFixed(3);
+  titleCard.style.opacity = titleVis.toFixed(3);
+  titleCard.style.transform =
+    `translateY(${( (1 - titleIn) * 18).toFixed(2)}px)`;
+  const lineProg = smooth(23.9, 24.9, t) * (1 - titleOut);
+  decoL.style.transform = `scaleX(${lineProg.toFixed(3)})`;
+  decoR.style.transform = `scaleX(${lineProg.toFixed(3)})`;
+  diamond.style.transform =
+    `rotate(45deg) scale(${(smooth(24.6, 25.2, t) * (1 - titleOut)).toFixed(3)})`;
+
+  // ---- 黑场：开场 1s 褪黑（不再长时间全黑）----
+  const fadeIn = 1 - smooth(0, 1.0, t);
+  fadeBlack.style.opacity = fadeIn.toFixed(3);
+}
+
+// ---- GSAP：唯一一条主驱动 tween ----
+window.__timelines = window.__timelines || {};
+const tl = gsap.timeline({ paused: true });
+tl.to(state, { t: 38, duration: 38, ease: "none", onUpdate: draw }, 0);
+window.__timelines["intro"] = tl;
+draw();
+</script>
+</body>
+</html>
